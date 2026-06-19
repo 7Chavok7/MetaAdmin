@@ -1,0 +1,97 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Квалификации {{ employee.full_name }} - MetaAdmin{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'dashboard:employee_detail' employee.id %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Назад к карточке
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-8 mx-auto">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-award"></i> Квалификации сотрудника
+                    <span class="badge bg-light text-dark ms-2">{{ employee.full_name }}</span>
+                </h5>
+            </div>
+            <div class="card-body">
+                <!-- Список текущих квалификаций -->
+                <h6 class="fw-bold mb-3">Текущие квалификации</h6>
+                {% if employee_skills %}
+                <div class="list-group mb-4">
+                    {% for skill in employee_skills %}
+                    <div class="list-group-item d-flex justify-content-between align-items-center">
+                        <div>
+                            <strong>{{ skill.skill.name }}</strong>
+                            <span class="badge bg-secondary ms-2">{{ skill.get_level_display }}</span>
+                            <small class="text-muted ms-2">с {{ skill.certified_date|date:"d.m.Y" }}</small>
+                        </div>
+                        {% if can_edit %}
+                        <a href="{% url 'dashboard:employee_skill_delete' employee.id skill.skill.id %}" 
+                           class="btn btn-danger btn-sm"
+                           onclick="return confirm('Удалить квалификацию {{ skill.skill.name }}?')">
+                            <i class="bi bi-trash"></i>
+                        </a>
+                        {% endif %}
+                    </div>
+                    {% endfor %}
+                </div>
+                {% else %}
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> У сотрудника пока нет квалификаций
+                </div>
+                {% endif %}
+                
+                <!-- Форма добавления новой квалификации -->
+                {% if can_edit and available_skills %}
+                <hr>
+                <h6 class="fw-bold mb-3"><i class="bi bi-plus-circle"></i> Добавить квалификацию</h6>
+                <form method="post" action="{% url 'dashboard:employee_skill_add' employee.id %}">
+                    {% csrf_token %}
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <select name="skill_id" class="form-select" required>
+                                <option value="">Выберите навык...</option>
+                                {% for skill in available_skills %}
+                                <option value="{{ skill.id }}">{{ skill.name }} ({{ skill.get_category_display }})</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
+                            <select name="level" class="form-select">
+                                <option value="beginner">Начинающий</option>
+                                <option value="middle" selected>Средний</option>
+                                <option value="expert">Эксперт</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-success w-100">
+                                <i class="bi bi-plus"></i> Добавить
+                            </button>
+                        </div>
+                    </div>
+                </form>
+                {% elif can_edit and not available_skills %}
+                <div class="alert alert-success mt-3">
+                    <i class="bi bi-check-circle"></i> У сотрудника есть все доступные квалификации!
+                </div>
+                {% endif %}
+                
+                <!-- Ссылка на создание нового навыка -->
+                {% if can_edit %}
+                <div class="mt-3">
+                    <a href="/admin/employees/skill/add/" class="btn btn-outline-primary btn-sm">
+                        <i class="bi bi-plus-circle"></i> Создать новый навык
+                    </a>
+                    <small class="text-muted ms-2">(в админке)</small>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

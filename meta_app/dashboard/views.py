@@ -1,3 +1,5 @@
+from meta_app.employees.models import Employee, Skill, EmployeeSkill
+from django.db import IntegrityError
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import login, logout, authenticate
@@ -146,3 +148,93 @@ def employee_edit(request, employee_id):
         'form': form,
         'employee': employee,
     })
+
+
+def is_manager(user):
+    """Проверка, является ли пользователь менеджером"""
+    return user.is_authenticated and (user.is_superuser or user.is_manager)
+
+
+# ... все существующие функции (login_view, logout_view, employee_list, employee_detail, employee_create, employee_edit) ...
+
+
+@login_required
+@user_passes_test(is_manager)
+def employee_skills(request, employee_id):
+    """Управление квалификациями сотрудника"""
+    employee = get_object_or_404(Employee, id=employee_id)
+
+    # Только суперпользователь может управлять квалификациями
+    if not request.user.is_superuser:
+        messages.error(request, 'У вас нет прав на управление квалификациями!')
+        return redirect('dashboard:employee_detail', employee_id=employee.id)
+
+    # Получаем все навыки сотрудника
+    employee_skills = employee.employee_skills.select_related('skill').all()
+
+    # Получаем все доступные навыки (которых у сотрудника еще нет)
+    existing_skill_ids = employee_skills.values_list('skill_id', flat=True)
+    available_skills = Skill.objects.exclude(id__in=existing_skill_ids)
+
+    return render(request, 'dashboard/employee_skills.html', {
+        'employee': employee,
+        'employee_skills': employee_skills,
+        'available_skills': available_skills,
+        'can_edit': request.user.is_superuser,
+    })
+
+
+@login_required
+@user_passes_test(is_manager)
+def employee_skill_add(request, employee_id):
+    """Добавление квалификации сотруднику"""
+    employee = get_object_or_404(Employee, id=employee_id)
+
+    if not request.user.is_superuser:
+        messages.error(request, 'У вас нет прав на добавление квалификаций!')
+        return redirect('dashboard:employee_detail', employee_id=employee.id)
+
+    if request.method == 'POST':
+        skill_id = request.POST.get('skill_id')
+        level = request.POST.get('level')
+
+        if not skill_id:
+            messages.error(request, 'Выберите навык')
+            return redirect('dashboard:employee_skills', employee_id=employee.id)
+
+        skill = get_object_or_404(Skill, id=skill_id)
+
+        try:
+            employee_skill = EmployeeSkill(
+                employee=employee,
+                skill=skill,
+                level=level or 'middle'
+            )
+            employee_skill.save()
+            messages.success(
+                request, f'Квалификация "{skill.name}" успешно добавлена!')
+        except IntegrityError:
+            messages.error(request, 'Эта квалификация уже есть у сотрудника')
+
+        return redirect('dashboard:employee_skills', employee_id=employee.id)
+
+    return redirect('dashboard:employee_skills', employee_id=employee.id)
+
+
+@login_required
+@user_passes_test(is_manager)
+def employee_skill_delete(request, employee_id, skill_id):
+    """Удаление квалификации у сотрудника"""
+    employee = get_object_or_404(Employee, id=employee_id)
+
+    if not request.user.is_superuser:
+        messages.error(request, 'У вас нет прав на удаление квалификаций!')
+        return redirect('dashboard:employee_detail', employee_id=employee.id)
+
+    employee_skill = get_object_or_404(
+        EmployeeSkill, employee=employee, skill_id=skill_id)
+    skill_name = employee_skill.skill.name
+    employee_skill.delete()
+
+    messages.success(request, f'Квалификация "{skill_name}" успешно удалена!')
+    return redirect('dashboard:employee_skills', employee_id=employee.id)
