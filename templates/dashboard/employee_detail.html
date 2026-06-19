@@ -1,0 +1,151 @@
+{% extends 'base/base.html' %}
+
+{% block title %}{{ employee.full_name }} - MetaAdmin{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="/employees/" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Назад к списку
+    </a>
+    <a href="/admin/employees/employee/{{ employee.id }}/change/" class="btn btn-outline-primary">
+        <i class="bi bi-pencil"></i> Редактировать
+    </a>
+</div>
+
+<div class="row">
+    <div class="col-md-4">
+        <div class="card shadow-sm">
+            <div class="card-body text-center">
+                {% if employee.photo %}
+                <img src="{{ employee.photo.url }}" alt="{{ employee.full_name }}" 
+                     class="rounded-circle mb-3" width="150" height="150" style="object-fit: cover;">
+                {% else %}
+                <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center mx-auto mb-3" 
+                     style="width: 150px; height: 150px; font-size: 48px;">
+                    {{ employee.last_name|slice:":1" }}
+                </div>
+                {% endif %}
+                
+                <h3>{{ employee.full_name }}</h3>
+                <p class="text-muted">
+                    <i class="bi bi-calendar3"></i> Дата рождения: {{ employee.birth_date|date:"d.m.Y" }}
+                </p>
+                
+                <div class="d-flex justify-content-center gap-2">
+                    <span class="badge bg-primary">Таб. №{{ employee.username }}</span>
+                    {% if employee.is_active %}
+                    <span class="badge bg-success">
+                        <i class="bi bi-check-circle"></i> Работает
+                    </span>
+                    {% else %}
+                    <span class="badge bg-danger">
+                        <i class="bi bi-x-circle"></i> Уволен
+                    </span>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-8">
+        <div class="card shadow-sm">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-person-vcard"></i> Анкетные данные</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-sm-6">
+                        <dl>
+                            <dt class="text-muted">Фамилия</dt>
+                            <dd>{{ employee.last_name }}</dd>
+                            
+                            <dt class="text-muted">Имя</dt>
+                            <dd>{{ employee.first_name }}</dd>
+                            
+                            <dt class="text-muted">Отчество</dt>
+                            <dd>{{ employee.patronymic|default:"-" }}</dd>
+                            
+                            <dt class="text-muted">Дата рождения</dt>
+                            <dd>{{ employee.birth_date|date:"d.m.Y" }}</dd>
+                        </dl>
+                    </div>
+                    <div class="col-sm-6">
+                        <dl>
+                            <dt class="text-muted">Дата приема</dt>
+                            <dd>{{ employee.hire_date|date:"d.m.Y" }}</dd>
+                            
+                            {% if employee.dismissal_date %}
+                            <dt class="text-muted">Дата увольнения</dt>
+                            <dd>{{ employee.dismissal_date|date:"d.m.Y" }}</dd>
+                            {% endif %}
+                            
+                            <dt class="text-muted">Семейное положение</dt>
+                            <dd>{{ employee.get_marital_status_display|default:"-" }}</dd>
+                            
+                            <dt class="text-muted">Дети</dt>
+                            <dd>
+                                {% if employee.has_children %}
+                                {{ employee.children_count }} чел.
+                                {% else %}
+                                Нет
+                                {% endif %}
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <dt class="text-muted">Место регистрации</dt>
+                        <dd>{{ employee.registration_address|default:"-"|linebreaks }}</dd>
+                        
+                        <dt class="text-muted">Место проживания</dt>
+                        <dd>{{ employee.residence_address|default:"-"|linebreaks }}</dd>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="row">
+                    <div class="col-sm-6">
+                        <dt class="text-muted">Военная обязанность</dt>
+                        <dd>{{ employee.get_military_status_display|default:"-" }}</dd>
+                    </div>
+                    <div class="col-sm-6">
+                        <dt class="text-muted">Образование</dt>
+                        <dd>
+                            <strong>Специальность:</strong> {{ employee.education_specialty|default:"-" }}<br>
+                            <strong>Учебное заведение:</strong> {{ employee.education_institution|default:"-" }}<br>
+                            <strong>Год окончания:</strong> {{ employee.education_year|default:"-" }}
+                        </dd>
+                    </div>
+                </div>
+                
+                <hr>
+                
+                <div class="row">
+                    <div class="col-12">
+                        <dt class="text-muted">Предыдущие места работы</dt>
+                        <dd>
+                            {% if employee.previous_work_1 %}
+                            <strong>1.</strong> {{ employee.previous_work_1|linebreaksbr }}<br>
+                            {% endif %}
+                            {% if employee.previous_work_2 %}
+                            <strong>2.</strong> {{ employee.previous_work_2|linebreaksbr }}<br>
+                            {% endif %}
+                            {% if employee.previous_work_3 %}
+                            <strong>3.</strong> {{ employee.previous_work_3|linebreaksbr }}
+                            {% endif %}
+                            {% if not employee.previous_work_1 and not employee.previous_work_2 and not employee.previous_work_3 %}
+                            Не указано
+                            {% endif %}
+                        </dd>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
