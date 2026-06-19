@@ -6,7 +6,7 @@ from django.contrib.auth import login, logout, authenticate
 from django.contrib import messages
 from meta_app.employees.models import Employee
 from meta_app.employees.forms import EmployeeForm, EmployeeCreateForm
-from meta_app.workstations.models import EmployeeWorkstation
+from meta_app.workstations.models import Workstation, EmployeeWorkstation
 from .forms import LoginForm
 
 
@@ -238,3 +238,122 @@ def employee_skill_delete(request, employee_id, skill_id):
 
     messages.success(request, f'Квалификация "{skill_name}" успешно удалена!')
     return redirect('dashboard:employee_skills', employee_id=employee.id)
+
+
+@login_required
+@user_passes_test(is_manager)
+def employee_workstations(request, employee_id):
+    """Управление участками сотрудника"""
+    employee = get_object_or_404(Employee, id=employee_id)
+
+    if not request.user.is_superuser:
+        messages.error(request, 'У вас нет прав на управление участками!')
+        return redirect('dashboard:employee_detail', employee_id=employee.id)
+
+    # Получаем все назначения сотрудника
+    assignments = employee.workstation_assignments.select_related(
+        'workstation').all()
+
+    # Получаем все доступные участки (которых у сотрудника еще нет)
+    existing_workstation_ids = assignments.values_list(
+        'workstation_id', flat=True)
+    available_workstations = Workstation.objects.filter(
+        is_active=True).exclude(id__in=existing_workstation_ids)
+
+    return render(request, 'dashboard/employee_workstations.html', {
+        'employee': employee,
+        'assignments': assignments,
+        'available_workstations': available_workstations,
+        'can_edit': request.user.is_superuser,
+    })
+
+
+@login_required
+@user_passes_test(is_manager)
+def employee_workstation_add(request, employee_id):
+    """Добавление назначения на участок"""
+    employee = get_object_or_404(Employee, id=employee_id)
+
+    if not request.user.is_superuser:
+        messages.error(request, 'У вас нет прав на добавление участков!')
+        return redirect('dashboard:employee_detail', employee_id=employee.id)
+
+    if request.method == 'POST':
+        workstation_id = request.POST.get('workstation_id')
+        is_primary = request.POST.get('is_primary') == 'on'
+
+        if not workstation_id:
+            messages.error(request, 'Выберите участок')
+            return redirect('dashboard:employee_workstations', employee_id=employee.id)
+
+        workstation = get_object_or_404(Workstation, id=workstation_id)
+
+        # Если добавляем основной участок, снимаем пометку "основной" со всех остальных
+        if is_primary:
+            EmployeeWorkstation.objects.filter(
+                employee=employee, is_primary=True).update(is_primary=False)
+
+        try:
+            assignment = EmployeeWorkstation(
+                employee=employee,
+                workstation=workstation,
+                is_primary=is_primary,
+                created_by=request.user,
+                updated_by=request.user,
+            )
+            assignment.save()
+            messages.success(
+                request, f'Назначение на "{workstation.name}" успешно добавлено!')
+        except IntegrityError:
+            messages.error(request, 'Этот участок уже назначен сотруднику')
+
+        return redirect('dashboard:employee_workstations', employee_id=employee.id)
+
+    return redirect('dashboard:employee_workstations', employee_id=employee.id)
+
+
+@login_required
+@user_passes_test(is_manager)
+def employee_workstation_delete(request, employee_id, workstation_id):
+    """Удаление назначения на участок"""
+    employee = get_object_or_404(Employee, id=employee_id)
+
+    if not request.user.is_superuser:
+        messages.error(request, 'У вас нет прав на удаление участков!')
+        return redirect('dashboard:employee_detail', employee_id=employee.id)
+
+    assignment = get_object_or_404(
+        EmployeeWorkstation, employee=employee, workstation_id=workstation_id)
+    workstation_name = assignment.workstation.name
+    assignment.delete()
+
+    messages.success(
+        request, f'Назначение на "{workstation_name}" успешно удалено!')
+    return redirect('dashboard:employee_workstations', employee_id=employee.id)
+
+
+@login_required
+@user_passes_test(is_manager)
+def employee_workstation_set_primary(request, employee_id, workstation_id):
+    """Установка основного участка"""
+    employee = get_object_or_404(Employee, id=employee_id)
+
+    if not request.user.is_superuser:
+        messages.error(
+            request, 'У вас нет прав на изменение основного участка!')
+        return redirect('dashboard:employee_detail', employee_id=employee.id)
+
+    # Снимаем пометку "основной" со всех участков
+    EmployeeWorkstation.objects.filter(
+        employee=employee, is_primary=True).update(is_primary=False)
+
+    # Устанавливаем "основной" для выбранного
+    assignment = get_object_or_404(
+        EmployeeWorkstation, employee=employee, workstation_id=workstation_id)
+    assignment.is_primary = True
+    assignment.updated_by = request.user
+    assignment.save()
+
+    messages.success(
+        request, f'Участок "{assignment.workstation.name}" установлен как основной!')
+    return redirect('dashboard:employee_workstations', employee_id=employee.id)

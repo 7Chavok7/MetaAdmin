@@ -24,4 +24,14 @@ urlpatterns = [
          views.employee_skill_add, name='employee_skill_add'),
     path('employees/<int:employee_id>/skills/<int:skill_id>/delete/',
          views.employee_skill_delete, name='employee_skill_delete'),
+
+    # Участки
+    path('employees/<int:employee_id>/workstations/',
+         views.employee_workstations, name='employee_workstations'),
+    path('employees/<int:employee_id>/workstations/add/',
+         views.employee_workstation_add, name='employee_workstation_add'),
+    path('employees/<int:employee_id>/workstations/<int:workstation_id>/delete/',
+         views.employee_workstation_delete, name='employee_workstation_delete'),
+    path('employees/<int:employee_id>/workstations/<int:workstation_id>/set-primary/',
+         views.employee_workstation_set_primary, name='employee_workstation_set_primary'),
 ]
