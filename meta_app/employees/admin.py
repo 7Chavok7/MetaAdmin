@@ -17,6 +17,7 @@ class EmployeeAdmin(UserAdmin):
     list_display = [
         'full_name',
         'username',
+        'card_number',  # ← добавить
         'birth_date',
         'hire_date',
         'is_active',

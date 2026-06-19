@@ -28,6 +28,17 @@
                         {% endif %}
                     </div>
                 </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.card_number.id_for_label }}" class="form-label">Номер карточки</label>
+                        {{ form.card_number }}
+                        {% if form.card_number.errors %}
+                        <div class="text-danger small">{{ form.card_number.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <div class="row">
                 <div class="col-md-3">
                     <div class="mb-3">
                         <label for="{{ form.password.id_for_label }}" class="form-label">Пароль *</label>

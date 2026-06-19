@@ -28,6 +28,14 @@ class Employee(AbstractUser):
         default=False,
         verbose_name='Может редактировать данные'
     )
+    
+    card_number = models.CharField(
+        max_length=50,
+        unique=True,
+        blank=True,
+        null=True,
+        verbose_name='Номер карточки'
+    )
 
     # Личные данные
     last_name = models.CharField(

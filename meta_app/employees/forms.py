@@ -8,6 +8,7 @@ class EmployeeForm(forms.ModelForm):
     class Meta:
         model = Employee
         fields = [
+            'card_number',
             'last_name',
             'first_name',
             'patronymic',
@@ -30,16 +31,37 @@ class EmployeeForm(forms.ModelForm):
             'is_active',
         ]
         widgets = {
-            'birth_date': forms.DateInput(attrs={'type': 'date'}),
-            'hire_date': forms.DateInput(attrs={'type': 'date'}),
-            'dismissal_date': forms.DateInput(attrs={'type': 'date'}),
-            'registration_address': forms.Textarea(attrs={'rows': 3}),
-            'residence_address': forms.Textarea(attrs={'rows': 3}),
-            'previous_work_1': forms.Textarea(attrs={'rows': 2}),
-            'previous_work_2': forms.Textarea(attrs={'rows': 2}),
-            'previous_work_3': forms.Textarea(attrs={'rows': 2}),
+            'birth_date': forms.DateInput(
+                attrs={'type': 'date', 'class': 'form-control'},
+                format='%Y-%m-%d'
+            ),
+            'hire_date': forms.DateInput(
+                attrs={'type': 'date', 'class': 'form-control'},
+                format='%Y-%m-%d'
+            ),
+            'dismissal_date': forms.DateInput(
+                attrs={'type': 'date', 'class': 'form-control'},
+                format='%Y-%m-%d'
+            ),
+            'registration_address': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'residence_address': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'previous_work_1': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'previous_work_2': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'previous_work_3': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'card_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'patronymic': forms.TextInput(attrs={'class': 'form-control'}),
+            'education_specialty': forms.TextInput(attrs={'class': 'form-control'}),
+            'education_institution': forms.TextInput(attrs={'class': 'form-control'}),
+            'education_year': forms.NumberInput(attrs={'class': 'form-control'}),
+            'children_count': forms.NumberInput(attrs={'class': 'form-control'}),
+            'marital_status': forms.Select(attrs={'class': 'form-control'}),
+            'military_status': forms.Select(attrs={'class': 'form-control'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
         labels = {
+            'card_number': 'Номер карточки',
             'last_name': 'Фамилия',
             'first_name': 'Имя',
             'patronymic': 'Отчество',
@@ -85,6 +107,7 @@ class EmployeeCreateForm(forms.ModelForm):
         model = Employee
         fields = [
             'username',
+            'card_number',
             'last_name',
             'first_name',
             'patronymic',
@@ -107,17 +130,39 @@ class EmployeeCreateForm(forms.ModelForm):
             'is_active',
         ]
         widgets = {
-            'birth_date': forms.DateInput(attrs={'type': 'date'}),
-            'hire_date': forms.DateInput(attrs={'type': 'date'}),
-            'dismissal_date': forms.DateInput(attrs={'type': 'date'}),
-            'registration_address': forms.Textarea(attrs={'rows': 3}),
-            'residence_address': forms.Textarea(attrs={'rows': 3}),
-            'previous_work_1': forms.Textarea(attrs={'rows': 2}),
-            'previous_work_2': forms.Textarea(attrs={'rows': 2}),
-            'previous_work_3': forms.Textarea(attrs={'rows': 2}),
+            'birth_date': forms.DateInput(
+                attrs={'type': 'date', 'class': 'form-control'},
+                format='%Y-%m-%d'
+            ),
+            'hire_date': forms.DateInput(
+                attrs={'type': 'date', 'class': 'form-control'},
+                format='%Y-%m-%d'
+            ),
+            'dismissal_date': forms.DateInput(
+                attrs={'type': 'date', 'class': 'form-control'},
+                format='%Y-%m-%d'
+            ),
+            'registration_address': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'residence_address': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'previous_work_1': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'previous_work_2': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'previous_work_3': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'username': forms.TextInput(attrs={'class': 'form-control'}),
+            'card_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'last_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'first_name': forms.TextInput(attrs={'class': 'form-control'}),
+            'patronymic': forms.TextInput(attrs={'class': 'form-control'}),
+            'education_specialty': forms.TextInput(attrs={'class': 'form-control'}),
+            'education_institution': forms.TextInput(attrs={'class': 'form-control'}),
+            'education_year': forms.NumberInput(attrs={'class': 'form-control'}),
+            'children_count': forms.NumberInput(attrs={'class': 'form-control'}),
+            'marital_status': forms.Select(attrs={'class': 'form-control'}),
+            'military_status': forms.Select(attrs={'class': 'form-control'}),
+            'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
         labels = {
             'username': 'Табельный номер',
+            'card_number': 'Номер карточки',
             'last_name': 'Фамилия',
             'first_name': 'Имя',
             'patronymic': 'Отчество',
@@ -139,7 +184,7 @@ class EmployeeCreateForm(forms.ModelForm):
             'dismissal_date': 'Дата увольнения',
             'is_active': 'Работает',
         }
-
+        
     def clean_password_confirm(self):
         """Проверка совпадения паролей"""
         password = self.cleaned_data.get('password')

@@ -13,7 +13,7 @@
 <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
     {% for employee in employees %}
     <div class="col">
-        <div class="card h-100 shadow-sm hover-shadow">
+        <div class="card h-100 shadow-sm">
             <div class="card-body">
                 <div class="d-flex align-items-start gap-3">
                     <!-- Фото -->
@@ -30,6 +30,9 @@
                     <div class="flex-grow-1">
                         <h5 class="card-title mb-0">{{ employee.full_name }}</h5>
                         <small class="text-muted">Таб. №{{ employee.username }}</small>
+                        {% if employee.card_number %}
+                        <br><small class="text-muted">Карта №{{ employee.card_number }}</small>
+                        {% endif %}
                         <div class="mt-2">
                             <span class="badge bg-success">
                                 <i class="bi bi-calendar-check"></i> {{ employee.hire_date|date:"d.m.Y" }}
@@ -39,7 +42,7 @@
                 </div>
             </div>
             <div class="card-footer bg-transparent">
-                <a href="/employees/{{ employee.id }}/" class="btn btn-outline-primary btn-sm w-100">
+                <a href="{% url 'dashboard:employee_detail' employee.id %}" class="btn btn-outline-primary btn-sm w-100">
                     <i class="bi bi-eye"></i> Подробнее
                 </a>
             </div>
@@ -49,7 +52,7 @@
     <div class="col-12">
         <div class="alert alert-info">
             <i class="bi bi-info-circle"></i> Сотрудников пока нет. 
-            <a href="/admin/employees/employee/add/" class="alert-link">Добавьте первого сотрудника</a>
+            <a href="{% url 'dashboard:employee_create' %}" class="alert-link">Добавьте первого сотрудника</a>
         </div>
     </div>
     {% endfor %}

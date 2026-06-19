@@ -17,6 +17,9 @@
         <form method="post" enctype="multipart/form-data">
             {% csrf_token %}
             
+
+            
+
             <div class="row">
                 <div class="col-md-6">
                     <div class="row">
@@ -52,7 +55,18 @@
                         <div class="text-danger small">{{ form.birth_date.errors }}</div>
                         {% endif %}
                     </div>
-                    
+                
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.card_number.id_for_label }}" class="form-label">Номер карточки</label>
+                                {{ form.card_number }}
+                                {% if form.card_number.errors %}
+                                <div class="text-danger small">{{ form.card_number.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
                     <div class="mb-3">
                         <label for="{{ form.photo.id_for_label }}" class="form-label">Фото</label>
                         {{ form.photo }}

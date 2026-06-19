@@ -115,7 +115,6 @@ def employee_edit(request, employee_id):
     """Редактирование сотрудника"""
     employee = get_object_or_404(Employee, id=employee_id)
 
-    # Только суперпользователь может редактировать
     if not request.user.is_superuser:
         messages.error(request, 'У вас нет прав на редактирование!')
         return redirect('dashboard:employee_detail', employee_id=employee.id)
@@ -123,7 +122,6 @@ def employee_edit(request, employee_id):
     if request.method == 'POST':
         form = EmployeeForm(request.POST, request.FILES, instance=employee)
         if form.is_valid():
-            # Сохраняем сотрудника с указанием, кто редактирует
             employee_obj = form.save(commit=False)
             employee_obj._updated_by_user = request.user
             employee_obj.save()
@@ -132,7 +130,17 @@ def employee_edit(request, employee_id):
                 request, f'Данные сотрудника {employee.full_name} успешно обновлены!')
             return redirect('dashboard:employee_detail', employee_id=employee.id)
     else:
+        # Инициализируем форму с существующими данными
         form = EmployeeForm(instance=employee)
+        # Убеждаемся, что даты в правильном формате
+        if employee.birth_date:
+            form.initial['birth_date'] = employee.birth_date.strftime(
+                '%Y-%m-%d')
+        if employee.hire_date:
+            form.initial['hire_date'] = employee.hire_date.strftime('%Y-%m-%d')
+        if employee.dismissal_date:
+            form.initial['dismissal_date'] = employee.dismissal_date.strftime(
+                '%Y-%m-%d')
 
     return render(request, 'dashboard/employee_edit.html', {
         'form': form,
