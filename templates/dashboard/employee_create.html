@@ -1,0 +1,249 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Добавление сотрудника - MetaAdmin{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'dashboard:employee_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Назад к списку
+    </a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-success text-white">
+        <h5 class="mb-0"><i class="bi bi-person-plus"></i> Добавление нового сотрудника</h5>
+    </div>
+    <div class="card-body">
+        <form method="post" enctype="multipart/form-data">
+            {% csrf_token %}
+            
+            <!-- Учетные данные -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.username.id_for_label }}" class="form-label">Табельный номер *</label>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                        <div class="text-danger small">{{ form.username.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="{{ form.password.id_for_label }}" class="form-label">Пароль *</label>
+                        {{ form.password }}
+                        {% if form.password.errors %}
+                        <div class="text-danger small">{{ form.password.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="mb-3">
+                        <label for="{{ form.password_confirm.id_for_label }}" class="form-label">Подтверждение *</label>
+                        {{ form.password_confirm }}
+                        {% if form.password_confirm.errors %}
+                        <div class="text-danger small">{{ form.password_confirm.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <hr>
+            
+            <!-- Личная информация -->
+            <h6 class="fw-bold">Личная информация</h6>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="{{ form.last_name.id_for_label }}" class="form-label">Фамилия *</label>
+                        {{ form.last_name }}
+                        {% if form.last_name.errors %}
+                        <div class="text-danger small">{{ form.last_name.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="{{ form.first_name.id_for_label }}" class="form-label">Имя *</label>
+                        {{ form.first_name }}
+                        {% if form.first_name.errors %}
+                        <div class="text-danger small">{{ form.first_name.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="{{ form.patronymic.id_for_label }}" class="form-label">Отчество</label>
+                        {{ form.patronymic }}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.birth_date.id_for_label }}" class="form-label">Дата рождения *</label>
+                        {{ form.birth_date }}
+                        {% if form.birth_date.errors %}
+                        <div class="text-danger small">{{ form.birth_date.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.photo.id_for_label }}" class="form-label">Фото</label>
+                        {{ form.photo }}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.hire_date.id_for_label }}" class="form-label">Дата приема *</label>
+                        {{ form.hire_date }}
+                        {% if form.hire_date.errors %}
+                        <div class="text-danger small">{{ form.hire_date.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.dismissal_date.id_for_label }}" class="form-label">Дата увольнения</label>
+                        {{ form.dismissal_date }}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="mb-3">
+                <div class="form-check">
+                    {{ form.is_active }}
+                    <label for="{{ form.is_active.id_for_label }}" class="form-check-label">
+                        Сотрудник работает
+                    </label>
+                </div>
+            </div>
+            
+            <hr>
+            
+            <!-- Адреса -->
+            <h6 class="fw-bold">Адреса</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.registration_address.id_for_label }}" class="form-label">Место регистрации</label>
+                        {{ form.registration_address }}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.residence_address.id_for_label }}" class="form-label">Место проживания</label>
+                        {{ form.residence_address }}
+                    </div>
+                </div>
+            </div>
+            
+            <hr>
+            
+            <!-- Семейное положение -->
+            <h6 class="fw-bold">Семейное положение</h6>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="{{ form.marital_status.id_for_label }}" class="form-label">Семейное положение</label>
+                        {{ form.marital_status }}
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <div class="form-check mt-4">
+                            {{ form.has_children }}
+                            <label for="{{ form.has_children.id_for_label }}" class="form-check-label">
+                                Есть дети
+                            </label>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="{{ form.children_count.id_for_label }}" class="form-label">Количество детей</label>
+                        {{ form.children_count }}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.military_status.id_for_label }}" class="form-label">Военная обязанность</label>
+                        {{ form.military_status }}
+                    </div>
+                </div>
+            </div>
+            
+            <hr>
+            
+            <!-- Образование -->
+            <h6 class="fw-bold">Образование</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.education_specialty.id_for_label }}" class="form-label">Специальность</label>
+                        {{ form.education_specialty }}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.education_institution.id_for_label }}" class="form-label">Учебное заведение</label>
+                        {{ form.education_institution }}
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="mb-3">
+                        <label for="{{ form.education_year.id_for_label }}" class="form-label">Год окончания</label>
+                        {{ form.education_year }}
+                    </div>
+                </div>
+            </div>
+            
+            <hr>
+            
+            <!-- Предыдущие места работы -->
+            <h6 class="fw-bold">Предыдущие места работы</h6>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.previous_work_1.id_for_label }}" class="form-label">Место работы 1</label>
+                        {{ form.previous_work_1 }}
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.previous_work_2.id_for_label }}" class="form-label">Место работы 2</label>
+                        {{ form.previous_work_2 }}
+                    </div>
+                </div>
+            </div>
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.previous_work_3.id_for_label }}" class="form-label">Место работы 3</label>
+                        {{ form.previous_work_3 }}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                <a href="{% url 'dashboard:employee_list' %}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Отмена
+                </a>
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-save"></i> Создать сотрудника
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

@@ -2,9 +2,9 @@ from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import login, logout, authenticate
 from django.contrib import messages
-from django.db import models
 from meta_app.employees.models import Employee
-from meta_app.employees.forms import EmployeeForm
+from meta_app.employees.forms import EmployeeForm, EmployeeCreateForm
+from meta_app.workstations.models import EmployeeWorkstation
 from .forms import LoginForm
 
 
@@ -63,12 +63,49 @@ def employee_list(request):
 def employee_detail(request, employee_id):
     """Карточка сотрудника"""
     employee = get_object_or_404(Employee, id=employee_id)
+
+    # Получаем навыки сотрудника
     skills = employee.employee_skills.select_related('skill').all()
+
+    # Получаем участки сотрудника
+    workstation_assignments = employee.workstation_assignments.select_related(
+        'workstation').all()
 
     return render(request, 'dashboard/employee_detail.html', {
         'employee': employee,
         'skills': skills,
+        'workstation_assignments': workstation_assignments,
         'can_edit': request.user.is_superuser,
+    })
+
+
+@login_required
+@user_passes_test(is_manager)
+def employee_create(request):
+    """Создание нового сотрудника"""
+    if not request.user.is_superuser:
+        messages.error(request, 'У вас нет прав на создание сотрудников!')
+        return redirect('dashboard:employee_list')
+
+    if request.method == 'POST':
+        form = EmployeeCreateForm(request.POST, request.FILES)
+        if form.is_valid():
+            # Получаем текущего пользователя как Employee
+            current_user = Employee.objects.get(id=request.user.id)
+
+            employee = form.save(commit=False)
+            employee.created_by = current_user
+            employee.updated_by = current_user
+            employee.save()
+
+            messages.success(
+                request, f'Сотрудник {employee.full_name} успешно создан!')
+            return redirect('dashboard:employee_detail', employee_id=employee.id)
+    else:
+        form = EmployeeCreateForm()
+
+    return render(request, 'dashboard/employee_create.html', {
+        'form': form,
     })
 
 
