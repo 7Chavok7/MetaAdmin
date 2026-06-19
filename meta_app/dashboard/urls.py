@@ -4,6 +4,11 @@ from . import views
 app_name = 'dashboard'
 
 urlpatterns = [
+    # Аутентификация
+    path('login/', views.login_view, name='login'),
+    path('logout/', views.logout_view, name='logout'),
+
+    # Сотрудники
     path('', views.employee_list, name='employee_list'),
     path('employees/', views.employee_list, name='employee_list'),
     path('employees/<int:employee_id>/',

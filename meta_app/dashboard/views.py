@@ -1,13 +1,50 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth import login, logout, authenticate
 from django.contrib import messages
+from django.db import models
 from meta_app.employees.models import Employee
 from meta_app.employees.forms import EmployeeForm
+from .forms import LoginForm
 
 
 def is_manager(user):
     """Проверка, является ли пользователь менеджером"""
     return user.is_authenticated and (user.is_superuser or user.is_manager)
+
+
+def login_view(request):
+    """Страница входа"""
+    if request.user.is_authenticated:
+        return redirect('dashboard:employee_list')
+
+    if request.method == 'POST':
+        form = LoginForm(request, data=request.POST)
+        if form.is_valid():
+            username = form.cleaned_data.get('username')
+            password = form.cleaned_data.get('password')
+            user = authenticate(request, username=username, password=password)
+            if user is not None:
+                login(request, user)
+                messages.success(
+                    request, f'Добро пожаловать, {user.full_name}!')
+                return redirect('dashboard:employee_list')
+            else:
+                messages.error(request, 'Неверный табельный номер или пароль.')
+        else:
+            messages.error(
+                request, 'Ошибка входа. Проверьте введенные данные.')
+    else:
+        form = LoginForm()
+
+    return render(request, 'dashboard/login.html', {'form': form})
+
+
+def logout_view(request):
+    """Выход из системы"""
+    logout(request)
+    messages.info(request, 'Вы вышли из системы.')
+    return redirect('dashboard:login')
 
 
 @login_required
@@ -49,7 +86,11 @@ def employee_edit(request, employee_id):
     if request.method == 'POST':
         form = EmployeeForm(request.POST, request.FILES, instance=employee)
         if form.is_valid():
-            form.save()
+            # Сохраняем сотрудника с указанием, кто редактирует
+            employee_obj = form.save(commit=False)
+            employee_obj._updated_by_user = request.user
+            employee_obj.save()
+
             messages.success(
                 request, f'Данные сотрудника {employee.full_name} успешно обновлены!')
             return redirect('dashboard:employee_detail', employee_id=employee.id)

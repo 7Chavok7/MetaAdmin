@@ -1,0 +1,48 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Вход в систему - MetaAdmin{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+    <div class="col-md-4">
+        <div class="card shadow-lg mt-5">
+            <div class="card-header bg-primary text-white text-center py-3">
+                <h4 class="mb-0"><i class="bi bi-person-badge"></i> MetaAdmin</h4>
+                <small>Система учета персонала</small>
+            </div>
+            <div class="card-body p-4">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.username.id_for_label }}" class="form-label">
+                            <i class="bi bi-person"></i> Табельный номер
+                        </label>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                        <div class="text-danger small">{{ form.username.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.password.id_for_label }}" class="form-label">
+                            <i class="bi bi-lock"></i> Пароль
+                        </label>
+                        {{ form.password }}
+                        {% if form.password.errors %}
+                        <div class="text-danger small">{{ form.password.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary w-100 py-2">
+                        <i class="bi bi-box-arrow-in-right"></i> Войти
+                    </button>
+                </form>
+            </div>
+            <div class="card-footer text-center text-muted small py-2">
+                © 2024 MetaAdmin
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

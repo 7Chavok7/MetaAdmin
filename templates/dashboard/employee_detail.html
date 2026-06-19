@@ -146,6 +146,35 @@
                         </dd>
                     </div>
                 </div>
+
+                <!-- Аудит -->
+                <hr>
+                <div class="row">
+                    <div class="col-12">
+                        <h6 class="fw-bold"><i class="bi bi-clock-history"></i> История изменений</h6>
+                        <dl>
+                            <dt class="text-muted">Создал</dt>
+                            <dd>
+                                {% if employee.created_by %}
+                                {{ employee.created_by.full_name }}
+                                {% else %}
+                                Система
+                                {% endif %}
+                                <small class="text-muted">({{ employee.created_at|date:"d.m.Y H:i" }})</small>
+                            </dd>
+                            
+                            <dt class="text-muted">Последнее изменение</dt>
+                            <dd>
+                                {% if employee.updated_by %}
+                                {{ employee.updated_by.full_name }}
+                                {% else %}
+                                Не редактировался
+                                {% endif %}
+                                <small class="text-muted">({{ employee.updated_at|date:"d.m.Y H:i" }})</small>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
             </div>
         </div>
     </div>

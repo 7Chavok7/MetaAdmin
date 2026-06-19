@@ -21,8 +21,6 @@ class EmployeeAdmin(UserAdmin):
         'hire_date',
         'is_active',
         'is_manager',
-        'marital_status',
-        'has_children',
     ]
     list_filter = [
         'is_active',
@@ -39,6 +37,7 @@ class EmployeeAdmin(UserAdmin):
     ]
     ordering = ['last_name', 'first_name']
     filter_horizontal = []
+    readonly_fields = ['created_at', 'updated_at', 'created_by', 'updated_by']
 
     inlines = [EmployeeSkillInline]
 
@@ -67,6 +66,10 @@ class EmployeeAdmin(UserAdmin):
         ('Даты', {
             'fields': ('hire_date', 'dismissal_date')
         }),
+        ('Аудит', {
+            'fields': ('created_by', 'created_at', 'updated_by', 'updated_at'),
+            'classes': ('collapse',)
+        }),
     )
 
     add_fieldsets = (
@@ -76,31 +79,33 @@ class EmployeeAdmin(UserAdmin):
         }),
     )
 
+    def save_model(self, request, obj, form, change):
+        """Переопределяем сохранение для заполнения аудита"""
+        if not change:  # Если создается новый объект
+            obj._created_by_user = request.user
+        # Всегда обновляем updated_by при сохранении
+        obj._updated_by_user = request.user
+        super().save_model(request, obj, form, change)
+
     def get_readonly_fields(self, request, obj=None):
         """Если пользователь не суперпользователь - делаем поля только для чтения"""
         if not request.user.is_superuser:
-            # Все поля только для чтения
             return [f.name for f in self.model._meta.fields]
-        return []
+        return self.readonly_fields
 
     def has_add_permission(self, request):
-        """Разрешаем добавление только суперпользователям"""
         return request.user.is_superuser
 
     def has_delete_permission(self, request, obj=None):
-        """Разрешаем удаление только суперпользователям"""
         return request.user.is_superuser
 
     def has_change_permission(self, request, obj=None):
-        """Разрешаем изменение только суперпользователям"""
         return request.user.is_superuser
 
     def get_queryset(self, request):
-        """Ограничиваем список сотрудников для не-суперпользователей"""
         qs = super().get_queryset(request)
         if request.user.is_superuser:
             return qs
-        # Обычные пользователи видят только активных сотрудников
         return qs.filter(is_active=True)
 
 
@@ -125,6 +130,7 @@ class EmployeeSkillAdmin(admin.ModelAdmin):
     list_display = ['employee', 'skill', 'level', 'certified_date']
     list_filter = ['skill__category', 'level']
     search_fields = ['employee__full_name', 'skill__name']
+    readonly_fields = ['certified_date']
 
     def has_add_permission(self, request):
         return request.user.is_superuser
@@ -136,7 +142,6 @@ class EmployeeSkillAdmin(admin.ModelAdmin):
         return request.user.is_superuser
 
 
-# Убираем группы из админки для обычных пользователей
 admin.site.unregister(Group)
 
 
