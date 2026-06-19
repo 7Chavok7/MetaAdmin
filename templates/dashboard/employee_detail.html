@@ -4,12 +4,14 @@
 
 {% block content %}
 <div class="mb-3">
-    <a href="/employees/" class="btn btn-outline-secondary">
+    <a href="{% url 'dashboard:employee_list' %}" class="btn btn-outline-secondary">
         <i class="bi bi-arrow-left"></i> Назад к списку
     </a>
-    <a href="/admin/employees/employee/{{ employee.id }}/change/" class="btn btn-outline-primary">
+    {% if can_edit %}
+    <a href="{% url 'dashboard:employee_edit' employee.id %}" class="btn btn-primary">
         <i class="bi bi-pencil"></i> Редактировать
     </a>
+    {% endif %}
 </div>
 
 <div class="row">

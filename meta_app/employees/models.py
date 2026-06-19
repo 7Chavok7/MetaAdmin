@@ -44,7 +44,7 @@ class Employee(AbstractUser):
         verbose_name='Отчество'
     )
     birth_date = models.DateField(
-        blank=True,
+        blank=True, 
         null=True,
         verbose_name='Дата рождения'
     )
@@ -118,7 +118,7 @@ class Employee(AbstractUser):
         verbose_name='Год окончания'
     )
 
-    # Трудовой стаж (предыдущие места работы)
+    # Трудовой стаж
     previous_work_1 = models.TextField(
         blank=True,
         verbose_name='Предыдущее место работы 1'
@@ -132,7 +132,7 @@ class Employee(AbstractUser):
         verbose_name='Предыдущее место работы 3'
     )
 
-    # Дата приема и увольнения
+    # Даты
     hire_date = models.DateField(
         default=timezone.now,
         verbose_name='Дата приема'
@@ -142,6 +142,32 @@ class Employee(AbstractUser):
         null=True,
         verbose_name='Дата увольнения'
     )
+    
+    # Системные поля (аудит)
+    created_by = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='created_employees',
+        verbose_name='Кто создал'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата создания'
+    )
+    updated_by = models.ForeignKey(
+        'self',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='updated_employees',
+        verbose_name='Кто редактировал'
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Дата редактирования'
+    )
 
     class Meta:
         verbose_name = 'Сотрудник'
@@ -150,8 +176,99 @@ class Employee(AbstractUser):
 
     def __str__(self):
         return f"{self.last_name} {self.first_name} {self.patronymic}".strip()
+    
+    def save(self, *args, **kwargs):
+        """Переопределяем save для автоматического заполнения аудита"""
+        # Если объект создается в первый раз (нет pk)
+        if not self.pk:
+            # Если передан request.user, сохраняем его как created_by
+            if hasattr(self, '_created_by_user'):
+                self.created_by = self._created_by_user
+
+        # При каждом сохранении обновляем updated_by
+        if hasattr(self, '_updated_by_user'):
+            self.updated_by = self._updated_by_user
+
+        super().save(*args, **kwargs)
 
     @property
     def full_name(self):
-        """Полное имя"""
         return f"{self.last_name} {self.first_name} {self.patronymic}".strip()
+
+
+class Skill(models.Model):
+    """Модель навыка/квалификации"""
+
+    CATEGORY_CHOICES = [
+        ('production', 'Производство'),
+        ('warehouse', 'Склад'),
+        ('office', 'Офис'),
+    ]
+
+    name = models.CharField(
+        max_length=100,
+        unique=True,
+        verbose_name='Название навыка'
+    )
+    category = models.CharField(
+        max_length=20,
+        choices=CATEGORY_CHOICES,
+        verbose_name='Категория'
+    )
+    description = models.TextField(
+        blank=True,
+        verbose_name='Описание'
+    )
+
+    class Meta:
+        verbose_name = 'Навык'
+        verbose_name_plural = 'Навыки'
+        ordering = ['category', 'name']
+
+    def __str__(self):
+        return f"{self.name} ({self.get_category_display()})"
+
+
+class EmployeeSkill(models.Model):
+    """Связь сотрудника с навыками (квалификация)"""
+
+    LEVEL_CHOICES = [
+        ('beginner', 'Начинающий'),
+        ('middle', 'Средний'),
+        ('expert', 'Эксперт'),
+    ]
+
+    employee = models.ForeignKey(
+        Employee,
+        on_delete=models.CASCADE,
+        related_name='employee_skills',
+        verbose_name='Сотрудник'
+    )
+    skill = models.ForeignKey(
+        Skill,
+        on_delete=models.CASCADE,
+        related_name='skill_employees',
+        verbose_name='Навык'
+    )
+    level = models.CharField(
+        max_length=20,
+        choices=LEVEL_CHOICES,
+        default='middle',
+        verbose_name='Уровень'
+    )
+    certified_date = models.DateField(
+        auto_now_add=True,
+        verbose_name='Дата получения'
+    )
+    note = models.TextField(
+        blank=True,
+        verbose_name='Примечание'
+    )
+
+    class Meta:
+        verbose_name = 'Квалификация сотрудника'
+        verbose_name_plural = 'Квалификации сотрудников'
+        unique_together = ['employee', 'skill']
+
+    def __str__(self):
+        return f"{self.employee.full_name} - {self.skill.name} ({self.get_level_display()})"
