@@ -21,7 +21,7 @@ def attendance_today(request):
 
     employees = Employee.objects.filter(
         is_active=True,
-        is_superuser=False  # ← исключаем суперпользователей
+        is_superuser=False
     ).order_by('last_name', 'first_name')
 
     employee_data = []
@@ -51,11 +51,6 @@ def attendance_today(request):
 def attendance_create(request, employee_id):
     """Создание записи за любой день"""
     employee = get_object_or_404(Employee, id=employee_id)
-
-    # Если сотрудник - суперпользователь и текущий пользователь не суперпользователь
-    if employee.is_superuser and not request.user.is_superuser:
-        messages.error(request, 'Нельзя создавать записи для администратора')
-        return redirect('dashboard:home')
 
     if request.method == 'POST':
         form = AttendanceForm(request.POST)
@@ -94,36 +89,28 @@ def attendance_create(request, employee_id):
 
             if next_url:
                 return redirect(next_url)
-            return redirect('dashboard:attendance_today')
+            return redirect('dashboard:home')
     else:
-        # Получаем дату из GET-параметра
         date_param = request.GET.get('date')
 
-        # Если дата передана - используем её, иначе сегодня
         if date_param:
             try:
                 record_date = datetime.strptime(date_param, '%Y-%m-%d').date()
-                # Преобразуем в строку для initial
-                record_date_str = date_param  # уже в правильном формате
             except ValueError:
                 record_date = timezone.now().date()
-                record_date_str = record_date.strftime('%Y-%m-%d')
         else:
             record_date = timezone.now().date()
-            record_date_str = record_date.strftime('%Y-%m-%d')
 
         next_url = request.GET.get('next')
 
-        # Предзаполняем участок, если есть основной
         default_workstation = None
         primary_assignment = employee.workstation_assignments.filter(
             is_primary=True).first()
         if primary_assignment:
             default_workstation = primary_assignment.workstation
 
-        # Создаем форму с initial данными
         initial_data = {
-            'record_date': record_date_str,  # ← передаем строку!
+            'record_date': record_date.strftime('%Y-%m-%d'),
         }
 
         if default_workstation:
@@ -161,27 +148,23 @@ def attendance_edit(request, attendance_id):
             attendance = form.save(commit=False)
             attendance.updated_by = request.user
             attendance.save()
+
             messages.success(request, 'Запись обновлена!')
 
             if next_url:
                 return redirect(next_url)
-            return redirect('dashboard:attendance_today')
+            return redirect('dashboard:home')
     else:
-        # Создаем форму с existing данными
         form = AttendanceForm(instance=attendance)
-
-        # Убеждаемся, что дата правильно отображается
-        if attendance.record_date:
-            # Передаем дату в правильном формате
-            form.initial['record_date'] = attendance.record_date.strftime(
-                '%Y-%m-%d')
+        # Явно устанавливаем значение для record_date в initial
+        form.initial['record_date'] = attendance.record_date.strftime(
+            '%Y-%m-%d')
 
     return render(request, 'attendance/edit.html', {
         'form': form,
         'attendance': attendance,
         'next_url': next_url,
     })
-
 
 @login_required
 @user_passes_test(is_manager)
@@ -191,12 +174,12 @@ def attendance_delete(request, attendance_id):
 
     if not request.user.is_superuser:
         messages.error(request, 'У вас нет прав на удаление!')
-        return redirect('dashboard:attendance_today')
+        return redirect('dashboard:home')
 
     employee_name = attendance.employee.full_name
     attendance.delete()
     messages.success(request, f'Запись для {employee_name} удалена!')
-    return redirect('dashboard:attendance_today')
+    return redirect('dashboard:home')
 
 
 @login_required
@@ -207,9 +190,8 @@ def attendance_all(request):
     date_from = request.GET.get('date_from')
     date_to = request.GET.get('date_to')
 
-    # Базовый запрос (исключая суперпользователей)
     attendances = DailyAttendance.objects.filter(
-        employee__is_superuser=False  # ← исключаем суперпользователей
+        employee__is_superuser=False
     ).order_by('-record_date', 'employee__last_name')
 
     if employee_id:
@@ -220,7 +202,9 @@ def attendance_all(request):
         attendances = attendances.filter(record_date__lte=date_to)
 
     employees = Employee.objects.filter(
-        is_active=True).order_by('last_name', 'first_name')
+        is_active=True,
+        is_superuser=False
+    ).order_by('last_name', 'first_name')
 
     return render(request, 'attendance/all.html', {
         'attendances': attendances,

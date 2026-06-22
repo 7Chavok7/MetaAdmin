@@ -7,8 +7,8 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1><i class="bi bi-calendar3"></i> Календарь посещаемости</h1>
     <div>
-        <a href="{% url 'dashboard:home' %}" class="btn btn-light btn-sm">
-            <i class="bi bi-calendar-check"></i> Сегодня
+        <a href="{% url 'dashboard:attendance_today' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-clock-history"></i> Сегодня
         </a>
         <a href="{% url 'dashboard:attendance_all' %}" class="btn btn-outline-secondary">
             <i class="bi bi-list-ul"></i> Все записи
@@ -37,46 +37,47 @@
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            <table class="table table-bordered table-hover mb-0" style="font-size: 12px;">
+            <table class="table table-bordered table-hover mb-0" style="font-size: 11px;">
                 <thead class="table-light text-center">
                     <tr>
-                        <th style="min-width: 150px; position: sticky; left: 0; background: #f8f9fa; z-index: 1;">ФИО</th>
-                        <th style="min-width: 40px; background: #f8f9fa;">Таб. №</th>
+                        <th style="min-width: 120px; max-width: 120px; position: sticky; left: 0; background: #f8f9fa; z-index: 1; font-size: 11px;">ФИО</th>
+                        <th style="min-width: 30px; max-width: 30px; background: #f8f9fa; font-size: 10px;">Таб.</th>
                         {% for day in days_in_month %}
-                        <th style="min-width: 35px; 
+                        <th style="min-width: 28px; max-width: 28px; 
                                    {% if day.weekday >= 5 %}background: #f8d7da; color: #721c24;{% endif %}
-                                   {% if day.date == today %}background: #fff3cd;{% endif %}">
+                                   {% if day.date == today %}background: #fff3cd;{% endif %}
+                                   font-size: 10px; padding: 2px;">
                             {{ day.day }}
-                            <br><small style="font-weight: normal; font-size: 8px;">{{ day.weekday_short }}</small>
+                            <br><small style="font-weight: normal; font-size: 7px;">{{ day.weekday_short }}</small>
                         </th>
                         {% endfor %}
-                        <th style="min-width: 60px; background: #f8f9fa; position: sticky; right: 0; z-index: 1;">Итого</th>
+                        <th style="min-width: 45px; max-width: 45px; background: #f8f9fa; position: sticky; right: 0; z-index: 1; font-size: 10px;">Итого</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for employee in employees %}
                     <tr>
-                        <td style="position: sticky; left: 0; background: white; z-index: 1; font-weight: 500;">
-                            {{ employee.last_name }} {{ employee.first_name|slice:":1" }}.
-                            {% if employee.patronymic %}{{ employee.patronymic|slice:":1" }}.{% endif %}
+                        <td style="position: sticky; left: 0; background: white; z-index: 1; font-weight: 500; font-size: 11px; padding: 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;">
+                            <span title="{{ employee.full_name }}">{{ employee.last_name }} {{ employee.first_name|slice:":1" }}.{% if employee.patronymic %}{{ employee.patronymic|slice:":1" }}.{% endif %}</span>
                         </td>
-                        <td class="text-center" style="font-size: 11px;">{{ employee.username }}</td>
+                        <td class="text-center" style="font-size: 9px; padding: 2px;">{{ employee.employee_id }}</td>
                         
                         {% for day in days_in_month %}
                             {% with day_attendance=month_attendances|get_item:employee.id %}
                                 {% if day_attendance and day_attendance|get_item:day.day %}
                                     {% with att=day_attendance|get_item:day.day %}
-                                        <td class="text-center p-1" style="cursor: pointer; 
+                                        <td class="text-center" style="cursor: pointer; 
                                             {% if day.is_weekend and att.status == 'weekend' %}background: #fce4e4; border: 1px solid #f5c6cb;{% endif %}
                                             {% if att.status == 'present' %}background: #d4edda;
                                             {% elif att.status == 'absent' %}background: #f8d7da;
                                             {% elif att.status == 'weekend' %}background: #fff3cd;
                                             {% elif att.status == 'sick' %}background: #d1ecf1;
                                             {% elif att.status == 'vacation' %}background: #e2e3e5;
-                                            {% endif %}"
-                                            onclick="window.location.href='{% url 'dashboard:attendance_edit' att.id %}?next={{ request.path }}'"
+                                            {% endif %}
+                                            padding: 1px; min-width: 28px; max-width: 28px; height: 28px;"
+                                            onclick="window.location.href='{% url 'dashboard:attendance_edit' att.id %}?next={{ request.get_full_path }}'"
                                             title="{{ employee.full_name }}: {{ att.get_status_display }}, {{ att.actual_hours|floatformat:1 }} ч.">
-                                            <span style="font-size: 10px;">
+                                            <span style="font-size: 9px;">
                                                 {% if att.status == 'present' %}✓
                                                 {% elif att.status == 'absent' %}✗
                                                 {% elif att.status == 'weekend' %}В
@@ -84,27 +85,26 @@
                                                 {% elif att.status == 'vacation' %}О
                                                 {% endif %}
                                             </span>
-                                            <br><small style="font-size: 7px;">{{ att.actual_hours|floatformat:1 }}</small>
+                                            <br><small style="font-size: 6px;">{{ att.actual_hours|floatformat:1 }}</small>
                                         </td>
                                     {% endwith %}
                                 {% else %}
                                     {% if day.is_weekend %}
-                                        <!-- Если выходной и нет записи -->
-                                        <td class="text-center p-1" style="
+                                        <td class="text-center" style="
                                             background: #fce4e4; 
                                             border: 1px solid #f5c6cb;
-                                            font-size: 10px;
-                                            cursor: pointer;"
-                                            onclick="window.location.href='{% url 'dashboard:attendance_create' employee.id %}?date={{ year }}-{{ month|stringformat:"02d" }}-{{ day.day|stringformat:"02d" }}&next={{ request.path }}'"
+                                            font-size: 9px;
+                                            cursor: pointer;
+                                            padding: 1px; min-width: 28px; max-width: 28px; height: 28px;"
+                                            onclick="window.location.href='{% url 'dashboard:attendance_create' employee.id %}?date={{ year }}-{{ month|stringformat:"02d" }}-{{ day.day|stringformat:"02d" }}&next={{ request.get_full_path }}'"
                                             title="Создать запись для {{ employee.full_name }} - Выходной">
                                             <span style="color: #721c24;">В</span>
-                                            <br><small style="color: #721c24;">0.0</small>
+                                            <br><small style="color: #721c24; font-size: 6px;">0.0</small>
                                         </td>
                                     {% else %}
-                                        <!-- Если рабочий день и нет записи -->
-                                        <td class="text-center p-1" style="font-size: 10px;">
-                                            <a href="{% url 'dashboard:attendance_create' employee.id %}?date={{ year }}-{{ month|stringformat:"02d" }}-{{ day.day|stringformat:"02d" }}&next={{ request.path }}" 
-                                            class="text-decoration-none" style="color: #6c757d;">
+                                        <td class="text-center" style="font-size: 9px; padding: 1px; min-width: 28px; max-width: 28px; height: 28px;">
+                                            <a href="{% url 'dashboard:attendance_create' employee.id %}?date={{ year }}-{{ month|stringformat:"02d" }}-{{ day.day|stringformat:"02d" }}&next={{ request.get_full_path }}" 
+                                               class="text-decoration-none" style="color: #6c757d; font-size: 12px;">
                                                 <i class="bi bi-plus-circle"></i>
                                             </a>
                                         </td>
@@ -113,7 +113,7 @@
                             {% endwith %}
                         {% endfor %}
                         
-                        <td class="text-center fw-bold" style="position: sticky; right: 0; background: white; z-index: 1; font-size: 13px;">
+                        <td class="text-center fw-bold" style="position: sticky; right: 0; background: white; z-index: 1; font-size: 11px; padding: 2px; min-width: 45px; max-width: 45px;">
                             {% with total=month_totals|get_item:employee.id %}
                                 {{ total|floatformat:1 }}
                             {% endwith %}
@@ -154,10 +154,20 @@
     </button>
 </div>
 
-<!-- Стили для печати -->
+<!-- Стили -->
 <style>
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.table-responsive .table {
+    border-collapse: separate;
+    border-spacing: 0;
+}
+
 @media print {
-    .btn, .navbar, .card-header .btn {
+    .btn, .navbar, .card-header .btn, .mt-3 .btn {
         display: none !important;
     }
     .card {
@@ -178,7 +188,28 @@
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
     }
+    .table-responsive {
+        overflow: visible !important;
+    }
+    .table-responsive .table {
+        font-size: 8px !important;
+    }
+    td, th {
+        padding: 1px !important;
+        min-width: 20px !important;
+        max-width: 20px !important;
+    }
+    .table td, .table th {
+        padding: 1px !important;
+    }
     [style*="background: #fce4e4"] {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    .table-responsive::-webkit-scrollbar {
+        display: none;
+    }
+    body {
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
     }

@@ -10,9 +10,9 @@ urlpatterns = [
     path('logout/', views.logout_view, name='logout'),
 
     # Главная страница - теперь календарь!
-    path('', attendance_views.attendance_calendar, name='home'),  # ← изменили
+    path('', attendance_views.attendance_calendar, name='home'),
     path('calendar/', attendance_views.attendance_calendar,
-         name='attendance_calendar'),  # ← добавили для явного доступа
+         name='attendance_calendar'),
     path('calendar/<int:year>/<int:month>/',
          attendance_views.attendance_calendar, name='attendance_calendar'),
 

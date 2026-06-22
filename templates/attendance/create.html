@@ -20,10 +20,6 @@
 <div class="row justify-content-center">
     <div class="col-md-8 col-lg-6">
         <div class="card shadow-sm">
-            <!-- Временная отладка -->
-            <!--<div class="alert alert-info">
-                <strong>DEBUG:</strong> Дата из GET параметра: {{ request.GET.date|default:"не передана" }}
-            </div>-->
             <div class="card-header bg-success text-white">
                 <h5 class="mb-0">
                     <i class="bi bi-person-check"></i> Отметка прихода
@@ -32,7 +28,7 @@
             <div class="card-body">
                 <div class="alert alert-info">
                     <strong>{{ employee.full_name }}</strong>
-                    <br><small class="text-muted">Таб. №{{ employee.username }}</small>
+                    <br><small class="text-muted">Таб. №{{ employee.employee_id }}</small>
                 </div>
                 
                 <div class="alert alert-secondary">
