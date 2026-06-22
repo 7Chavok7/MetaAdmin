@@ -1,0 +1,132 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Все записи - MetaAdmin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-list-ul"></i> Все записи</h1>
+    <div>
+        <a href="{% url 'dashboard:home' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-calendar3"></i> Календарь
+        </a>
+        <a href="{% url 'dashboard:attendance_create' employees.first.id %}" class="btn btn-success">
+            <i class="bi bi-plus"></i> Новая запись
+        </a>
+    </div>
+</div>
+
+<!-- Фильтры с кнопкой создания -->
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3">
+            <div class="col-md-3">
+                <label class="form-label">Сотрудник</label>
+                <select name="employee" class="form-select">
+                    <option value="">Все сотрудники</option>
+                    {% for employee in employees %}
+                    <option value="{{ employee.id }}" {% if selected_employee == employee.id|stringformat:"s" %}selected{% endif %}>
+                        {{ employee.full_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Дата с</label>
+                <input type="date" name="date_from" class="form-control" value="{{ date_from }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label">Дата по</label>
+                <input type="date" name="date_to" class="form-control" value="{{ date_to }}">
+            </div>
+            <div class="col-md-3 d-flex gap-2 align-items-end">
+                <button type="submit" class="btn btn-primary flex-grow-1">
+                    <i class="bi bi-search"></i>
+                </button>
+                {% if selected_employee %}
+                <a href="{% url 'dashboard:attendance_create' selected_employee %}?date={{ date_from|default:'' }}" 
+                   class="btn btn-success flex-grow-1">
+                    <i class="bi bi-plus"></i>
+                </a>
+                {% endif %}
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Таблица записей -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Дата</th>
+                        <th>Сотрудник</th>
+                        <th>Участок</th>
+                        <th>Статус</th>
+                        <th>Начало</th>
+                        <th>Конец</th>
+                        <th>Часы</th>
+                        <th class="text-center">Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for attendance in attendances %}
+                    <tr>
+                        <td>{{ attendance.record_date|date:"d.m.Y" }}</td>
+                        <td>
+                            <strong>{{ attendance.employee.full_name }}</strong>
+                            <br><small class="text-muted">Таб. №{{ attendance.employee.username }}</small>
+                        </td>
+                        <td>{{ attendance.workstation.name|default:"—" }}</td>
+                        <td>
+                            <span class="badge 
+                                {% if attendance.status == 'present' %}bg-success
+                                {% elif attendance.status == 'absent' %}bg-danger
+                                {% elif attendance.status == 'weekend' %}bg-warning
+                                {% elif attendance.status == 'sick' %}bg-info
+                                {% elif attendance.status == 'vacation' %}bg-secondary
+                                {% endif %}">
+                                {{ attendance.get_status_display }}
+                            </span>
+                            {% if attendance.is_weekend_shift %}
+                            <span class="badge bg-warning">Выходной</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ attendance.start_time|time:"H:i"|default:"—" }}</td>
+                        <td>{{ attendance.end_time|time:"H:i"|default:"—" }}</td>
+                        <td>
+                            <strong>{{ attendance.actual_hours|floatformat:1 }}</strong> ч.
+                            {% if attendance.overtime_hours %}
+                            <br><small class="text-warning">+{{ attendance.overtime_hours|floatformat:1 }} перераб.</small>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if can_edit %}
+                            <div class="btn-group btn-group-sm">
+                                <a href="{% url 'dashboard:attendance_edit' attendance.id %}" 
+                                   class="btn btn-outline-primary">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                                <a href="{% url 'dashboard:attendance_delete' attendance.id %}" 
+                                   class="btn btn-outline-danger"
+                                   onclick="return confirm('Удалить запись?')">
+                                    <i class="bi bi-trash"></i>
+                                </a>
+                            </div>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-3">
+                            <p class="text-muted mb-0">Записей не найдено</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

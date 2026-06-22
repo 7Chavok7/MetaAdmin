@@ -1,10 +1,11 @@
-from meta_app.employees.models import Employee, Skill, EmployeeSkill
-from django.db import IntegrityError
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth import login, logout, authenticate
 from django.contrib import messages
-from meta_app.employees.models import Employee
+from django.db import IntegrityError
+from django.utils import timezone
+from datetime import timedelta
+from meta_app.employees.models import Employee, Skill, EmployeeSkill
 from meta_app.employees.forms import EmployeeForm, EmployeeCreateForm
 from meta_app.workstations.models import Workstation, EmployeeWorkstation
 from .forms import LoginForm
@@ -18,7 +19,7 @@ def is_manager(user):
 def login_view(request):
     """Страница входа"""
     if request.user.is_authenticated:
-        return redirect('dashboard:employee_list')
+        return redirect('dashboard:home')  # ← исправлено
 
     if request.method == 'POST':
         form = LoginForm(request, data=request.POST)
@@ -30,7 +31,7 @@ def login_view(request):
                 login(request, user)
                 messages.success(
                     request, f'Добро пожаловать, {user.full_name}!')
-                return redirect('dashboard:employee_list')
+                return redirect('dashboard:home')  # ← исправлено
             else:
                 messages.error(request, 'Неверный табельный номер или пароль.')
         else:
@@ -73,10 +74,30 @@ def employee_detail(request, employee_id):
     workstation_assignments = employee.workstation_assignments.select_related(
         'workstation').all()
 
+    # Получаем записи о работе за последние 30 дней
+    thirty_days_ago = timezone.now().date() - timedelta(days=30)
+    attendances = employee.attendances.filter(
+        record_date__gte=thirty_days_ago
+    ).order_by('-record_date')
+
+    # Считаем статистику за месяц
+    total_hours = sum(
+        [att.actual_hours for att in attendances if att.is_present])
+    total_overtime = sum([att.overtime_hours for att in attendances])
+    work_days = attendances.filter(is_present=True).count()
+    avg_hours = total_hours / work_days if work_days > 0 else 0
+
     return render(request, 'dashboard/employee_detail.html', {
         'employee': employee,
         'skills': skills,
         'workstation_assignments': workstation_assignments,
+        'attendances': attendances[:10],  # Последние 10 записей
+        'stats': {
+            'total_hours': total_hours,
+            'total_overtime': total_overtime,
+            'work_days': work_days,
+            'avg_hours': avg_hours,
+        },
         'can_edit': request.user.is_superuser,
     })
 
@@ -87,14 +108,12 @@ def employee_create(request):
     """Создание нового сотрудника"""
     if not request.user.is_superuser:
         messages.error(request, 'У вас нет прав на создание сотрудников!')
-        return redirect('dashboard:employee_list')
+        return redirect('dashboard:home')  # ← исправлено
 
     if request.method == 'POST':
         form = EmployeeCreateForm(request.POST, request.FILES)
         if form.is_valid():
-            # Получаем текущего пользователя как Employee
             current_user = Employee.objects.get(id=request.user.id)
-
             employee = form.save(commit=False)
             employee.created_by = current_user
             employee.updated_by = current_user
@@ -119,7 +138,7 @@ def employee_edit(request, employee_id):
 
     if not request.user.is_superuser:
         messages.error(request, 'У вас нет прав на редактирование!')
-        return redirect('dashboard:employee_detail', employee_id=employee.id)
+        return redirect('dashboard:home')  # ← исправлено
 
     if request.method == 'POST':
         form = EmployeeForm(request.POST, request.FILES, instance=employee)
@@ -130,11 +149,9 @@ def employee_edit(request, employee_id):
 
             messages.success(
                 request, f'Данные сотрудника {employee.full_name} успешно обновлены!')
-            return redirect('dashboard:employee_detail', employee_id=employee.id)
+            return redirect('dashboard:home')  # ← исправлено
     else:
-        # Инициализируем форму с существующими данными
         form = EmployeeForm(instance=employee)
-        # Убеждаемся, что даты в правильном формате
         if employee.birth_date:
             form.initial['birth_date'] = employee.birth_date.strftime(
                 '%Y-%m-%d')
@@ -150,29 +167,17 @@ def employee_edit(request, employee_id):
     })
 
 
-def is_manager(user):
-    """Проверка, является ли пользователь менеджером"""
-    return user.is_authenticated and (user.is_superuser or user.is_manager)
-
-
-# ... все существующие функции (login_view, logout_view, employee_list, employee_detail, employee_create, employee_edit) ...
-
-
 @login_required
 @user_passes_test(is_manager)
 def employee_skills(request, employee_id):
     """Управление квалификациями сотрудника"""
     employee = get_object_or_404(Employee, id=employee_id)
 
-    # Только суперпользователь может управлять квалификациями
     if not request.user.is_superuser:
         messages.error(request, 'У вас нет прав на управление квалификациями!')
-        return redirect('dashboard:employee_detail', employee_id=employee.id)
+        return redirect('dashboard:home')  # ← исправлено
 
-    # Получаем все навыки сотрудника
     employee_skills = employee.employee_skills.select_related('skill').all()
-
-    # Получаем все доступные навыки (которых у сотрудника еще нет)
     existing_skill_ids = employee_skills.values_list('skill_id', flat=True)
     available_skills = Skill.objects.exclude(id__in=existing_skill_ids)
 
@@ -192,7 +197,7 @@ def employee_skill_add(request, employee_id):
 
     if not request.user.is_superuser:
         messages.error(request, 'У вас нет прав на добавление квалификаций!')
-        return redirect('dashboard:employee_detail', employee_id=employee.id)
+        return redirect('dashboard:home')  # ← исправлено
 
     if request.method == 'POST':
         skill_id = request.POST.get('skill_id')
@@ -229,7 +234,7 @@ def employee_skill_delete(request, employee_id, skill_id):
 
     if not request.user.is_superuser:
         messages.error(request, 'У вас нет прав на удаление квалификаций!')
-        return redirect('dashboard:employee_detail', employee_id=employee.id)
+        return redirect('dashboard:home')  # ← исправлено
 
     employee_skill = get_object_or_404(
         EmployeeSkill, employee=employee, skill_id=skill_id)
@@ -248,13 +253,10 @@ def employee_workstations(request, employee_id):
 
     if not request.user.is_superuser:
         messages.error(request, 'У вас нет прав на управление участками!')
-        return redirect('dashboard:employee_detail', employee_id=employee.id)
+        return redirect('dashboard:home')  # ← исправлено
 
-    # Получаем все назначения сотрудника
     assignments = employee.workstation_assignments.select_related(
         'workstation').all()
-
-    # Получаем все доступные участки (которых у сотрудника еще нет)
     existing_workstation_ids = assignments.values_list(
         'workstation_id', flat=True)
     available_workstations = Workstation.objects.filter(
@@ -276,7 +278,7 @@ def employee_workstation_add(request, employee_id):
 
     if not request.user.is_superuser:
         messages.error(request, 'У вас нет прав на добавление участков!')
-        return redirect('dashboard:employee_detail', employee_id=employee.id)
+        return redirect('dashboard:home')  # ← исправлено
 
     if request.method == 'POST':
         workstation_id = request.POST.get('workstation_id')
@@ -288,7 +290,6 @@ def employee_workstation_add(request, employee_id):
 
         workstation = get_object_or_404(Workstation, id=workstation_id)
 
-        # Если добавляем основной участок, снимаем пометку "основной" со всех остальных
         if is_primary:
             EmployeeWorkstation.objects.filter(
                 employee=employee, is_primary=True).update(is_primary=False)
@@ -320,7 +321,7 @@ def employee_workstation_delete(request, employee_id, workstation_id):
 
     if not request.user.is_superuser:
         messages.error(request, 'У вас нет прав на удаление участков!')
-        return redirect('dashboard:employee_detail', employee_id=employee.id)
+        return redirect('dashboard:home')  # ← исправлено
 
     assignment = get_object_or_404(
         EmployeeWorkstation, employee=employee, workstation_id=workstation_id)
@@ -341,13 +342,10 @@ def employee_workstation_set_primary(request, employee_id, workstation_id):
     if not request.user.is_superuser:
         messages.error(
             request, 'У вас нет прав на изменение основного участка!')
-        return redirect('dashboard:employee_detail', employee_id=employee.id)
+        return redirect('dashboard:home')  # ← исправлено
 
-    # Снимаем пометку "основной" со всех участков
     EmployeeWorkstation.objects.filter(
         employee=employee, is_primary=True).update(is_primary=False)
-
-    # Устанавливаем "основной" для выбранного
     assignment = get_object_or_404(
         EmployeeWorkstation, employee=employee, workstation_id=workstation_id)
     assignment.is_primary = True

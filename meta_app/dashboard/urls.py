@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from meta_app.attendance import views as attendance_views
 
 app_name = 'dashboard'
 
@@ -8,8 +9,14 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
 
+    # Главная страница - теперь календарь!
+    path('', attendance_views.attendance_calendar, name='home'),  # ← изменили
+    path('calendar/', attendance_views.attendance_calendar,
+         name='attendance_calendar'),  # ← добавили для явного доступа
+    path('calendar/<int:year>/<int:month>/',
+         attendance_views.attendance_calendar, name='attendance_calendar'),
+
     # Сотрудники
-    path('', views.employee_list, name='employee_list'),
     path('employees/', views.employee_list, name='employee_list'),
     path('employees/create/', views.employee_create, name='employee_create'),
     path('employees/<int:employee_id>/',
@@ -34,4 +41,14 @@ urlpatterns = [
          views.employee_workstation_delete, name='employee_workstation_delete'),
     path('employees/<int:employee_id>/workstations/<int:workstation_id>/set-primary/',
          views.employee_workstation_set_primary, name='employee_workstation_set_primary'),
+
+    # Учет времени
+    path('attendance/', attendance_views.attendance_today, name='attendance_today'),
+    path('attendance/all/', attendance_views.attendance_all, name='attendance_all'),
+    path('attendance/create/<int:employee_id>/',
+         attendance_views.attendance_create, name='attendance_create'),
+    path('attendance/edit/<int:attendance_id>/',
+         attendance_views.attendance_edit, name='attendance_edit'),
+    path('attendance/delete/<int:attendance_id>/',
+         attendance_views.attendance_delete, name='attendance_delete'),
 ]

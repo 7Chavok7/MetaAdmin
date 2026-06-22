@@ -1,0 +1,172 @@
+{% extends 'base/base.html' %}
+{% load attendance_filters %}
+
+{% block title %}Календарь посещаемости - MetaAdmin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-calendar3"></i> Календарь посещаемости</h1>
+    <div>
+        <a href="{% url 'dashboard:home' %}" class="btn btn-light btn-sm">
+            <i class="bi bi-calendar-check"></i> Сегодня
+        </a>
+        <a href="{% url 'dashboard:attendance_all' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-list-ul"></i> Все записи
+        </a>
+    </div>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+        <div class="d-flex justify-content-between align-items-center">
+            <h5 class="mb-0">
+                <i class="bi bi-calendar-month"></i> {{ month_name }} {{ year }}
+            </h5>
+            <div>
+                <a href="{% url 'dashboard:attendance_calendar' year month|add:-1 %}" class="btn btn-light btn-sm">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+                <a href="{% url 'dashboard:attendance_calendar' %}" class="btn btn-light btn-sm">
+                    <i class="bi bi-calendar-check"></i> Сегодня
+                </a>
+                <a href="{% url 'dashboard:attendance_calendar' year month|add:1 %}" class="btn btn-light btn-sm">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover mb-0" style="font-size: 12px;">
+                <thead class="table-light text-center">
+                    <tr>
+                        <th style="min-width: 150px; position: sticky; left: 0; background: #f8f9fa; z-index: 1;">ФИО</th>
+                        <th style="min-width: 40px; background: #f8f9fa;">Таб. №</th>
+                        {% for day in days_in_month %}
+                        <th style="min-width: 35px; 
+                                   {% if day.weekday >= 5 %}background: #f8d7da; color: #721c24;{% endif %}
+                                   {% if day.date == today %}background: #fff3cd;{% endif %}">
+                            {{ day.day }}
+                            <br><small style="font-weight: normal; font-size: 8px;">{{ day.weekday_short }}</small>
+                        </th>
+                        {% endfor %}
+                        <th style="min-width: 60px; background: #f8f9fa; position: sticky; right: 0; z-index: 1;">Итого</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for employee in employees %}
+                    <tr>
+                        <td style="position: sticky; left: 0; background: white; z-index: 1; font-weight: 500;">
+                            {{ employee.last_name }} {{ employee.first_name|slice:":1" }}.
+                            {% if employee.patronymic %}{{ employee.patronymic|slice:":1" }}.{% endif %}
+                        </td>
+                        <td class="text-center" style="font-size: 11px;">{{ employee.username }}</td>
+                        
+                        {% for day in days_in_month %}
+                            {% with day_attendance=month_attendances|get_item:employee.id %}
+                                {% if day_attendance and day_attendance|get_item:day.day %}
+                                    {% with att=day_attendance|get_item:day.day %}
+                                        <td class="text-center p-1" style="cursor: pointer; 
+                                            {% if day.weekday >= 5 and att.status != 'present' %}background: #fce4e4; border: 1px solid #f5c6cb;{% endif %}
+                                            {% if att.status == 'present' %}background: #d4edda;
+                                            {% elif att.status == 'absent' %}background: #f8d7da;
+                                            {% elif att.status == 'weekend' %}background: #fff3cd;
+                                            {% elif att.status == 'sick' %}background: #d1ecf1;
+                                            {% elif att.status == 'vacation' %}background: #e2e3e5;
+                                            {% endif %}"
+                                            onclick="window.location.href='{% url 'dashboard:attendance_edit' att.id %}?next={{ request.path }}'"
+                                            title="{{ employee.full_name }}: {{ att.get_status_display }}, {{ att.actual_hours|floatformat:1 }} ч.">
+                                            <span style="font-size: 10px;">
+                                                {% if att.status == 'present' %}✓
+                                                {% elif att.status == 'absent' %}✗
+                                                {% elif att.status == 'weekend' %}В
+                                                {% elif att.status == 'sick' %}Б
+                                                {% elif att.status == 'vacation' %}О
+                                                {% endif %}
+                                            </span>
+                                            <br><small style="font-size: 7px;">{{ att.actual_hours|floatformat:1 }}</small>
+                                        </td>
+                                    {% endwith %}
+                                {% else %}
+                                    <td class="text-center p-1" style="{% if day.weekday >= 5 %}background: #fce4e4; border: 1px solid #f5c6cb {% endif %} font-size: 10px;">
+                                        <a href="{% url 'dashboard:attendance_create' employee.id %}?date={{ year }}-{{ month|stringformat:"02d" }}-{{ day.day|stringformat:"02d" }}&next={{ request.path }}" 
+                                        class="text-decoration-none" style="color: {% if day.weekday >= 5 %}#721c24{% else %}#6c757d{% endif %}; font-size: 14px; font-weight: bold;">
+                                            +
+                                        </a>
+                                    </td>
+                                {% endif %}
+                            {% endwith %}
+                        {% endfor %}
+                        
+                        <td class="text-center fw-bold" style="position: sticky; right: 0; background: white; z-index: 1; font-size: 13px;">
+                            {% with total=month_totals|get_item:employee.id %}
+                                {{ total|floatformat:1 }}
+                            {% endwith %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Легенда -->
+<div class="card shadow-sm mt-3">
+    <div class="card-header bg-secondary text-white">
+        <h5 class="mb-0"><i class="bi bi-info-circle"></i> Легенда</h5>
+    </div>
+    <div class="card-body">
+        <div class="d-flex flex-wrap gap-3">
+            <span><span class="badge bg-success">✓</span> Присутствовал</span>
+            <span><span class="badge bg-danger">✗</span> Отсутствовал</span>
+            <span><span class="badge bg-warning">В</span> Выходной</span>
+            <span><span class="badge bg-info">Б</span> Больничный</span>
+            <span><span class="badge bg-secondary">О</span> Отпуск</span>
+            <span><span class="badge bg-light text-dark border">+</span> Создать запись</span>
+            <span><span class="badge" style="background: #fce4e4; color: #721c24; border: 1px solid #f5c6cb;">Сб/Вс</span> Выходные дни</span>
+        </div>
+        <div class="mt-2">
+            <small class="text-muted">Кликните на ячейку для редактирования записи</small>
+        </div>
+    </div>
+</div>
+
+<!-- Кнопка для печати -->
+<div class="mt-3 text-end">
+    <button onclick="window.print()" class="btn btn-outline-secondary">
+        <i class="bi bi-printer"></i> Печать
+    </button>
+</div>
+
+<!-- Стили для печати -->
+<style>
+@media print {
+    .btn, .navbar, .card-header .btn {
+        display: none !important;
+    }
+    .card {
+        border: none !important;
+        box-shadow: none !important;
+    }
+    .card-header {
+        background: #0d6efd !important;
+        color: white !important;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    td[style*="background"] {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    th[style*="background"] {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+    [style*="background: #fce4e4"] {
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+    }
+}
+</style>
+{% endblock %}
