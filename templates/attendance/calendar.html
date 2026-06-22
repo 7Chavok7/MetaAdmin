@@ -67,7 +67,7 @@
                                 {% if day_attendance and day_attendance|get_item:day.day %}
                                     {% with att=day_attendance|get_item:day.day %}
                                         <td class="text-center p-1" style="cursor: pointer; 
-                                            {% if day.weekday >= 5 and att.status != 'present' %}background: #fce4e4; border: 1px solid #f5c6cb;{% endif %}
+                                            {% if day.is_weekend and att.status == 'weekend' %}background: #fce4e4; border: 1px solid #f5c6cb;{% endif %}
                                             {% if att.status == 'present' %}background: #d4edda;
                                             {% elif att.status == 'absent' %}background: #f8d7da;
                                             {% elif att.status == 'weekend' %}background: #fff3cd;
@@ -88,12 +88,27 @@
                                         </td>
                                     {% endwith %}
                                 {% else %}
-                                    <td class="text-center p-1" style="{% if day.weekday >= 5 %}background: #fce4e4; border: 1px solid #f5c6cb {% endif %} font-size: 10px;">
-                                        <a href="{% url 'dashboard:attendance_create' employee.id %}?date={{ year }}-{{ month|stringformat:"02d" }}-{{ day.day|stringformat:"02d" }}&next={{ request.path }}" 
-                                        class="text-decoration-none" style="color: {% if day.weekday >= 5 %}#721c24{% else %}#6c757d{% endif %}; font-size: 14px; font-weight: bold;">
-                                            +
-                                        </a>
-                                    </td>
+                                    {% if day.is_weekend %}
+                                        <!-- Если выходной и нет записи -->
+                                        <td class="text-center p-1" style="
+                                            background: #fce4e4; 
+                                            border: 1px solid #f5c6cb;
+                                            font-size: 10px;
+                                            cursor: pointer;"
+                                            onclick="window.location.href='{% url 'dashboard:attendance_create' employee.id %}?date={{ year }}-{{ month|stringformat:"02d" }}-{{ day.day|stringformat:"02d" }}&next={{ request.path }}'"
+                                            title="Создать запись для {{ employee.full_name }} - Выходной">
+                                            <span style="color: #721c24;">В</span>
+                                            <br><small style="color: #721c24;">0.0</small>
+                                        </td>
+                                    {% else %}
+                                        <!-- Если рабочий день и нет записи -->
+                                        <td class="text-center p-1" style="font-size: 10px;">
+                                            <a href="{% url 'dashboard:attendance_create' employee.id %}?date={{ year }}-{{ month|stringformat:"02d" }}-{{ day.day|stringformat:"02d" }}&next={{ request.path }}" 
+                                            class="text-decoration-none" style="color: #6c757d;">
+                                                <i class="bi bi-plus-circle"></i>
+                                            </a>
+                                        </td>
+                                    {% endif %}
                                 {% endif %}
                             {% endwith %}
                         {% endfor %}

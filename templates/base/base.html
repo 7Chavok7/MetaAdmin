@@ -46,18 +46,25 @@
                 </li>
                 
                 </ul>    
-                <ul class="navbar-nav">
+                <ul class="navbar-nav ms-auto">
                     {% if user.is_authenticated %}
-                    <li class="nav-item">
-                        <span class="navbar-text text-light me-2">
-                            <i class="bi bi-person-circle"></i> {{ user.full_name }}
-                        </span>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'dashboard:logout' %}">
-                            <i class="bi bi-box-arrow-right"></i> Выйти
-                        </a>
-                    </li>
+                        {% if user.is_superuser %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="/admin/">
+                                <i class="bi bi-shield-lock"></i> Админка
+                            </a>
+                        </li>
+                        {% endif %}
+                        <li class="nav-item">
+                            <span class="navbar-text text-light me-2">
+                                <i class="bi bi-person-circle"></i> {{ user.full_name }}
+                            </span>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'dashboard:logout' %}">
+                                <i class="bi bi-box-arrow-right"></i> Выйти
+                            </a>
+                        </li>
                     {% else %}
                     <li class="nav-item">
                         <a class="nav-link" href="{% url 'dashboard:login' %}">

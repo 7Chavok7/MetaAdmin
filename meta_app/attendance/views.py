@@ -20,7 +20,9 @@ def attendance_today(request):
     today = timezone.now().date()
 
     employees = Employee.objects.filter(
-        is_active=True).order_by('last_name', 'first_name')
+        is_active=True,
+        is_superuser=False  # ← исключаем суперпользователей
+    ).order_by('last_name', 'first_name')
 
     employee_data = []
     for employee in employees:
@@ -49,6 +51,11 @@ def attendance_today(request):
 def attendance_create(request, employee_id):
     """Создание записи за любой день"""
     employee = get_object_or_404(Employee, id=employee_id)
+
+    # Если сотрудник - суперпользователь и текущий пользователь не суперпользователь
+    if employee.is_superuser and not request.user.is_superuser:
+        messages.error(request, 'Нельзя создавать записи для администратора')
+        return redirect('dashboard:home')
 
     if request.method == 'POST':
         form = AttendanceForm(request.POST)
@@ -200,8 +207,10 @@ def attendance_all(request):
     date_from = request.GET.get('date_from')
     date_to = request.GET.get('date_to')
 
-    attendances = DailyAttendance.objects.all().order_by(
-        '-record_date', 'employee__last_name')
+    # Базовый запрос (исключая суперпользователей)
+    attendances = DailyAttendance.objects.filter(
+        employee__is_superuser=False  # ← исключаем суперпользователей
+    ).order_by('-record_date', 'employee__last_name')
 
     if employee_id:
         attendances = attendances.filter(employee_id=employee_id)
@@ -250,7 +259,9 @@ def attendance_calendar(request, year=None, month=None):
         })
 
     employees = Employee.objects.filter(
-        is_active=True).order_by('last_name', 'first_name')
+        is_active=True,
+        is_superuser=False
+    ).order_by('last_name', 'first_name')
 
     month_attendances = {}
     month_totals = {}
@@ -280,7 +291,7 @@ def attendance_calendar(request, year=None, month=None):
         'year': year,
         'month': month,
         'month_name': ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
-                       'Июль', 'Август', 'Сентябрь', 'Окторябрь', 'Ноябрь', 'Декабрь'][month - 1],
+                       'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'][month - 1],
         'today': today,
         'can_edit': request.user.is_superuser,
     })

@@ -53,9 +53,11 @@ def logout_view(request):
 @login_required
 @user_passes_test(is_manager)
 def employee_list(request):
-    """Список всех сотрудников"""
+    """Список всех сотрудников (исключая суперпользователей)"""
     employees = Employee.objects.filter(
-        is_active=True).order_by('last_name', 'first_name')
+        is_active=True,
+        is_superuser=False  # ← исключаем суперпользователей
+    ).order_by('last_name', 'first_name')
     return render(request, 'dashboard/employee_list.html', {
         'employees': employees
     })
@@ -67,6 +69,11 @@ def employee_detail(request, employee_id):
     """Карточка сотрудника"""
     employee = get_object_or_404(Employee, id=employee_id)
 
+    # Если это суперпользователь и текущий пользователь не суперпользователь
+    if employee.is_superuser and not request.user.is_superuser:
+        messages.error(request, 'Доступ к карточке администратора ограничен')
+        return redirect('dashboard:home')
+    
     # Получаем навыки сотрудника
     skills = employee.employee_skills.select_related('skill').all()
 
