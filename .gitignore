@@ -19,4 +19,7 @@ Thumbs.db
 
 # Секреты
 .env
-*.log
+*.logmetaadmin/settings.py
+*.pyc
+__pycache__/
+.env
