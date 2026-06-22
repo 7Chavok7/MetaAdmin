@@ -19,13 +19,24 @@
             
             <!-- Учетные данные -->
             <div class="row">
-                <div class="col-md-6">
-                    <div class="mb-3">
-                        <label for="{{ form.username.id_for_label }}" class="form-label">Табельный номер *</label>
-                        {{ form.username }}
-                        {% if form.username.errors %}
-                        <div class="text-danger small">{{ form.username.errors }}</div>
-                        {% endif %}
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="{{ form.login.id_for_label }}" class="form-label">Логин для входа *</label>
+                            {{ form.login }}
+                            {% if form.login.errors %}
+                            <div class="text-danger small">{{ form.login.errors }}</div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="mb-3">
+                            <label for="{{ form.employee_id.id_for_label }}" class="form-label">Табельный номер *</label>
+                            {{ form.employee_id }}
+                            {% if form.employee_id.errors %}
+                            <div class="text-danger small">{{ form.employee_id.errors }}</div>
+                            {% endif %}
+                        </div>
                     </div>
                 </div>
                 <div class="col-md-6">

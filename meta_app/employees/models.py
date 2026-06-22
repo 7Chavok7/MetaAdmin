@@ -1,10 +1,53 @@
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 from django.utils import timezone
+from django.contrib.auth.base_user import BaseUserManager
+
+
+class EmployeeManager(BaseUserManager):
+    """Кастомный менеджер для модели Employee"""
+
+    def create_user(self, login, employee_id, last_name, first_name, birth_date, hire_date, password=None, **extra_fields):
+        """Создание обычного пользователя"""
+        if not login:
+            raise ValueError('Логин обязателен')
+        if not employee_id:
+            raise ValueError('Табельный номер обязателен')
+        if not last_name:
+            raise ValueError('Фамилия обязательна')
+        if not first_name:
+            raise ValueError('Имя обязательно')
+        if not birth_date:
+            raise ValueError('Дата рождения обязательна')
+        if not hire_date:
+            raise ValueError('Дата приема обязательна')
+
+        user = self.model(
+            login=login,
+            employee_id=employee_id,
+            last_name=last_name,
+            first_name=first_name,
+            birth_date=birth_date,
+            hire_date=hire_date,
+            **extra_fields
+        )
+        user.set_password(password)
+        user.save(using=self._db)
+        return user
+
+    def create_superuser(self, login, employee_id, last_name, first_name, birth_date, hire_date, password=None, **extra_fields):
+        """Создание суперпользователя"""
+        extra_fields.setdefault('is_staff', True)
+        extra_fields.setdefault('is_superuser', True)
+        extra_fields.setdefault('is_active', True)
+
+        return self.create_user(login, employee_id, last_name, first_name, birth_date, hire_date, password, **extra_fields)
 
 
 class Employee(AbstractUser):
     """Модель сотрудника с анкетными данными"""
+    
+    objects = EmployeeManager()
 
     # Убираем ненужные поля от AbstractUser
     username = None
@@ -14,12 +57,28 @@ class Employee(AbstractUser):
     groups = None
     user_permissions = None
 
-    # Базовые поля
-    username = models.CharField(
+    # Поля для аутентификации
+    login = models.CharField(
         max_length=150,
         unique=True,
+        verbose_name='Логин для входа'
+    )
+
+    # Табельный номер (отдельное поле)
+    employee_id = models.CharField(
+        max_length=50,
+        # unique=True,
         verbose_name='Табельный номер'
     )
+
+    card_number = models.CharField(
+        max_length=50,
+        unique=True,
+        blank=True,
+        null=True,
+        verbose_name='Номер карточки'
+    )
+
     is_active = models.BooleanField(
         default=True,
         verbose_name='Работает'
@@ -27,14 +86,6 @@ class Employee(AbstractUser):
     is_manager = models.BooleanField(
         default=False,
         verbose_name='Может редактировать данные'
-    )
-    
-    card_number = models.CharField(
-        max_length=50,
-        unique=True,
-        blank=True,
-        null=True,
-        verbose_name='Номер карточки'
     )
 
     # Личные данные
@@ -52,7 +103,7 @@ class Employee(AbstractUser):
         verbose_name='Отчество'
     )
     birth_date = models.DateField(
-        blank=True, 
+        blank=True,
         null=True,
         verbose_name='Дата рождения'
     )
@@ -150,7 +201,7 @@ class Employee(AbstractUser):
         null=True,
         verbose_name='Дата увольнения'
     )
-    
+
     # Системные поля (аудит)
     created_by = models.ForeignKey(
         'self',
@@ -177,6 +228,11 @@ class Employee(AbstractUser):
         verbose_name='Дата редактирования'
     )
 
+    # Поле для аутентификации (вход по логину)
+    USERNAME_FIELD = 'login'
+    REQUIRED_FIELDS = ['employee_id', 'last_name',
+                       'first_name', 'birth_date', 'hire_date']
+
     class Meta:
         verbose_name = 'Сотрудник'
         verbose_name_plural = 'Сотрудники'
@@ -184,16 +240,13 @@ class Employee(AbstractUser):
 
     def __str__(self):
         return f"{self.last_name} {self.first_name} {self.patronymic}".strip()
-    
+
     def save(self, *args, **kwargs):
         """Переопределяем save для автоматического заполнения аудита"""
-        # Если объект создается в первый раз (нет pk)
         if not self.pk:
-            # Если передан request.user, сохраняем его как created_by
             if hasattr(self, '_created_by_user'):
                 self.created_by = self._created_by_user
 
-        # При каждом сохранении обновляем updated_by
         if hasattr(self, '_updated_by_user'):
             self.updated_by = self._updated_by_user
 

@@ -8,6 +8,8 @@ class EmployeeForm(forms.ModelForm):
     class Meta:
         model = Employee
         fields = [
+            'login',
+            'employee_id',
             'card_number',
             'last_name',
             'first_name',
@@ -31,23 +33,16 @@ class EmployeeForm(forms.ModelForm):
             'is_active',
         ]
         widgets = {
-            'birth_date': forms.DateInput(
-                attrs={'type': 'date', 'class': 'form-control'},
-                format='%Y-%m-%d'
-            ),
-            'hire_date': forms.DateInput(
-                attrs={'type': 'date', 'class': 'form-control'},
-                format='%Y-%m-%d'
-            ),
-            'dismissal_date': forms.DateInput(
-                attrs={'type': 'date', 'class': 'form-control'},
-                format='%Y-%m-%d'
-            ),
+            'birth_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'hire_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'dismissal_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'registration_address': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
             'residence_address': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
             'previous_work_1': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
             'previous_work_2': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
             'previous_work_3': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'login': forms.TextInput(attrs={'class': 'form-control'}),
+            'employee_id': forms.TextInput(attrs={'class': 'form-control'}),
             'card_number': forms.TextInput(attrs={'class': 'form-control'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -61,6 +56,8 @@ class EmployeeForm(forms.ModelForm):
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
         labels = {
+            'login': 'Логин для входа',
+            'employee_id': 'Табельный номер',
             'card_number': 'Номер карточки',
             'last_name': 'Фамилия',
             'first_name': 'Имя',
@@ -106,7 +103,8 @@ class EmployeeCreateForm(forms.ModelForm):
     class Meta:
         model = Employee
         fields = [
-            'username',
+            'login',
+            'employee_id',
             'card_number',
             'last_name',
             'first_name',
@@ -130,24 +128,16 @@ class EmployeeCreateForm(forms.ModelForm):
             'is_active',
         ]
         widgets = {
-            'birth_date': forms.DateInput(
-                attrs={'type': 'date', 'class': 'form-control'},
-                format='%Y-%m-%d'
-            ),
-            'hire_date': forms.DateInput(
-                attrs={'type': 'date', 'class': 'form-control'},
-                format='%Y-%m-%d'
-            ),
-            'dismissal_date': forms.DateInput(
-                attrs={'type': 'date', 'class': 'form-control'},
-                format='%Y-%m-%d'
-            ),
+            'birth_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'hire_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'dismissal_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'registration_address': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
             'residence_address': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
             'previous_work_1': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
             'previous_work_2': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
             'previous_work_3': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
-            'username': forms.TextInput(attrs={'class': 'form-control'}),
+            'login': forms.TextInput(attrs={'class': 'form-control'}),
+            'employee_id': forms.TextInput(attrs={'class': 'form-control'}),
             'card_number': forms.TextInput(attrs={'class': 'form-control'}),
             'last_name': forms.TextInput(attrs={'class': 'form-control'}),
             'first_name': forms.TextInput(attrs={'class': 'form-control'}),
@@ -161,7 +151,8 @@ class EmployeeCreateForm(forms.ModelForm):
             'is_active': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
         labels = {
-            'username': 'Табельный номер',
+            'login': 'Логин для входа',
+            'employee_id': 'Табельный номер',
             'card_number': 'Номер карточки',
             'last_name': 'Фамилия',
             'first_name': 'Имя',
@@ -184,25 +175,29 @@ class EmployeeCreateForm(forms.ModelForm):
             'dismissal_date': 'Дата увольнения',
             'is_active': 'Работает',
         }
-        
+
     def clean_password_confirm(self):
-        """Проверка совпадения паролей"""
         password = self.cleaned_data.get('password')
         password_confirm = self.cleaned_data.get('password_confirm')
         if password and password_confirm and password != password_confirm:
             raise forms.ValidationError('Пароли не совпадают')
         return password_confirm
 
-    def clean_username(self):
-        """Проверка уникальности табельного номера"""
-        username = self.cleaned_data.get('username')
-        if Employee.objects.filter(username=username).exists():
+    def clean_login(self):
+        login = self.cleaned_data.get('login')
+        if Employee.objects.filter(login=login).exists():
+            raise forms.ValidationError(
+                'Пользователь с таким логином уже существует')
+        return login
+
+    def clean_employee_id(self):
+        employee_id = self.cleaned_data.get('employee_id')
+        if Employee.objects.filter(employee_id=employee_id).exists():
             raise forms.ValidationError(
                 'Сотрудник с таким табельным номером уже существует')
-        return username
+        return employee_id
 
     def save(self, commit=True):
-        """Сохраняем сотрудника с хэшированным паролем"""
         employee = super().save(commit=False)
         employee.set_password(self.cleaned_data['password'])
         if commit:
