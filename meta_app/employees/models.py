@@ -67,7 +67,7 @@ class Employee(AbstractUser):
     # Табельный номер (отдельное поле)
     employee_id = models.CharField(
         max_length=50,
-        # unique=True,
+        unique=True,
         verbose_name='Табельный номер'
     )
 
@@ -232,6 +232,19 @@ class Employee(AbstractUser):
     USERNAME_FIELD = 'login'
     REQUIRED_FIELDS = ['employee_id', 'last_name',
                        'first_name', 'birth_date', 'hire_date']
+    
+    groups = models.ManyToManyField(
+        'auth.Group',
+        related_name='employee_set',
+        blank=True,
+        verbose_name='Группы'
+    )
+    user_permissions = models.ManyToManyField(
+        'auth.Permission',
+        related_name='employee_set',
+        blank=True,
+        verbose_name='Права доступа'
+    )
 
     class Meta:
         verbose_name = 'Сотрудник'

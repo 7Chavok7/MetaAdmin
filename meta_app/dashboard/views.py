@@ -19,7 +19,7 @@ def is_manager(user):
 def login_view(request):
     """Страница входа"""
     if request.user.is_authenticated:
-        return redirect('dashboard:home')  # ← исправлено
+        return redirect('dashboard:home') 
 
     if request.method == 'POST':
         form = LoginForm(request, data=request.POST)
@@ -31,7 +31,7 @@ def login_view(request):
                 login(request, user)
                 messages.success(
                     request, f'Добро пожаловать, {user.full_name}!')
-                return redirect('dashboard:home')  # ← исправлено
+                return redirect('dashboard:home')
             else:
                 messages.error(request, 'Неверный табельный номер или пароль.')
         else:

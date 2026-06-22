@@ -14,10 +14,12 @@ class EmployeeSkillInline(admin.TabularInline):
 
 @admin.register(Employee)
 class EmployeeAdmin(UserAdmin):
+    # Заменяем username на login в list_display
     list_display = [
         'full_name',
-        'username',
-        'card_number',  # ← добавить
+        'login',  # ← заменил username
+        'employee_id',
+        'card_number',
         'birth_date',
         'hire_date',
         'is_active',
@@ -34,7 +36,9 @@ class EmployeeAdmin(UserAdmin):
         'last_name',
         'first_name',
         'patronymic',
-        'username',
+        'login',  # ← заменил username
+        'employee_id',
+        'card_number',
     ]
     ordering = ['last_name', 'first_name']
     filter_horizontal = []
@@ -42,9 +46,10 @@ class EmployeeAdmin(UserAdmin):
 
     inlines = [EmployeeSkillInline]
 
+    # Убираем username из всех полей
     fieldsets = (
         ('Учетные данные', {
-            'fields': ('username', 'password', 'is_active', 'is_manager', 'is_staff', 'is_superuser')
+            'fields': ('login', 'employee_id', 'password', 'is_active', 'is_manager', 'is_staff', 'is_superuser')
         }),
         ('Личная информация', {
             'fields': ('last_name', 'first_name', 'patronymic', 'birth_date', 'photo')
@@ -73,23 +78,21 @@ class EmployeeAdmin(UserAdmin):
         }),
     )
 
+    # Убираем username из формы добавления
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
-            'fields': ('username', 'password1', 'password2', 'last_name', 'first_name', 'hire_date'),
+            'fields': ('login', 'employee_id', 'password1', 'password2', 'last_name', 'first_name', 'hire_date'),
         }),
     )
 
     def save_model(self, request, obj, form, change):
-        """Переопределяем сохранение для заполнения аудита"""
-        if not change:  # Если создается новый объект
+        if not change:
             obj._created_by_user = request.user
-        # Всегда обновляем updated_by при сохранении
         obj._updated_by_user = request.user
         super().save_model(request, obj, form, change)
 
     def get_readonly_fields(self, request, obj=None):
-        """Если пользователь не суперпользователь - делаем поля только для чтения"""
         if not request.user.is_superuser:
             return [f.name for f in self.model._meta.fields]
         return self.readonly_fields
@@ -107,13 +110,6 @@ class EmployeeAdmin(UserAdmin):
         qs = super().get_queryset(request)
         if request.user.is_superuser:
             return qs
-        return qs.filter(is_active=True)
-    
-    def get_queryset(self, request):
-        qs = super().get_queryset(request)
-        if request.user.is_superuser:
-            return qs  # Суперпользователь видит всех
-        # Обычные видят только сотрудников
         return qs.filter(is_active=True, is_superuser=False)
 
 
