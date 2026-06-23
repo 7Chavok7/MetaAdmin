@@ -94,27 +94,45 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         // WebSocket для получения обновлений
-        let socket = new WebSocket('ws://' + window.location.host + '/ws/updates/');
+        let socket;
 
-        socket.onmessage = function(e) {
-            const data = JSON.parse(e.data);
-            console.log('📡 Получено обновление:', data.message);
-            
-            // Показываем уведомление
-            showNotification('🔄 Данные обновлены!');
-            
-            // Перезагружаем страницу через 1 секунду
-            setTimeout(function() {
-                location.reload();
-            }, 1000);
-        };
+        function connectWebSocket() {
+            try {
+                // Используем тот же протокол, что и страница
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = protocol + '//' + window.location.host + '/ws/updates/';
+                
+                socket = new WebSocket(wsUrl);
+                console.log('🔌 Подключение к WebSocket:', wsUrl);
 
-        socket.onclose = function(e) {
-            console.log('🔌 WebSocket отключен. Переподключение...');
-            setTimeout(function() {
-                location.reload();
-            }, 3000);
-        };
+                socket.onmessage = function(e) {
+                    const data = JSON.parse(e.data);
+                    console.log('📡 Получено обновление:', data.message);
+                    showNotification('🔄 Данные обновлены!');
+                    setTimeout(function() {
+                        location.reload();
+                    }, 1000);
+                };
+
+                socket.onclose = function(e) {
+                    console.log('🔌 WebSocket отключен. Переподключение...');
+                    setTimeout(connectWebSocket, 3000);
+                };
+
+                socket.onerror = function(e) {
+                    console.error('❌ WebSocket ошибка:', e);
+                    socket.close();
+                };
+            } catch (e) {
+                console.error('❌ Ошибка подключения WebSocket:', e);
+                setTimeout(connectWebSocket, 5000);
+            }
+        }
+
+        // Подключаемся при загрузке страницы
+        document.addEventListener('DOMContentLoaded', function() {
+            connectWebSocket();
+        });
 
         // Функция для показа уведомления
         function showNotification(message) {
@@ -137,7 +155,6 @@
             `;
             document.body.appendChild(div);
 
-            // Автоматически скрыть через 3 секунды
             setTimeout(() => {
                 if (div) div.remove();
             }, 3000);

@@ -141,3 +141,6 @@ CHANNEL_LAYERS = {
         },
     },
 }
+
+# Для WebSocket через HTTP
+SECURE_WS_ORIGINS = ['http://localhost:8000', 'http://metaadmin.ru']
