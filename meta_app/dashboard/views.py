@@ -19,7 +19,7 @@ def is_manager(user):
 def login_view(request):
     """Страница входа"""
     if request.user.is_authenticated:
-        return redirect('dashboard:home') 
+        return redirect('dashboard:home')
 
     if request.method == 'POST':
         form = LoginForm(request, data=request.POST)
@@ -33,7 +33,7 @@ def login_view(request):
                     request, f'Добро пожаловать, {user.full_name}!')
                 return redirect('dashboard:home')
             else:
-                messages.error(request, 'Неверный табельный номер или пароль.')
+                messages.error(request, 'Неверный логин или пароль.')
         else:
             messages.error(
                 request, 'Ошибка входа. Проверьте введенные данные.')
@@ -56,24 +56,30 @@ def employee_list(request):
     """Список всех сотрудников (исключая суперпользователей)"""
     employees = Employee.objects.filter(
         is_active=True,
-        is_superuser=False  # ← исключаем суперпользователей
+        is_superuser=False
     ).order_by('last_name', 'first_name')
     return render(request, 'dashboard/employee_list.html', {
-        'employees': employees
+        'employees': employees,
+        'can_edit': request.user.is_superuser or request.user.is_manager,
     })
 
 
 @login_required
-@user_passes_test(is_manager)
 def employee_detail(request, employee_id):
     """Карточка сотрудника"""
     employee = get_object_or_404(Employee, id=employee_id)
 
-    # Если это суперпользователь и текущий пользователь не суперпользователь
+    # Обычный сотрудник видит только себя
+    if not (request.user.is_superuser or request.user.is_manager):
+        if request.user.id != employee.id:
+            messages.error(request, 'У вас нет доступа к этой карточке')
+            return redirect('dashboard:home')
+
+    # Администратор скрыт от обычных пользователей
     if employee.is_superuser and not request.user.is_superuser:
         messages.error(request, 'Доступ к карточке администратора ограничен')
         return redirect('dashboard:home')
-    
+
     # Получаем навыки сотрудника
     skills = employee.employee_skills.select_related('skill').all()
 
@@ -98,14 +104,14 @@ def employee_detail(request, employee_id):
         'employee': employee,
         'skills': skills,
         'workstation_assignments': workstation_assignments,
-        'attendances': attendances[:10],  # Последние 10 записей
+        'attendances': attendances[:10],
         'stats': {
             'total_hours': total_hours,
             'total_overtime': total_overtime,
             'work_days': work_days,
             'avg_hours': avg_hours,
         },
-        'can_edit': request.user.is_superuser,
+        'can_edit': request.user.is_superuser or request.user.is_manager,
     })
 
 
@@ -113,9 +119,9 @@ def employee_detail(request, employee_id):
 @user_passes_test(is_manager)
 def employee_create(request):
     """Создание нового сотрудника"""
-    if not request.user.is_superuser:
+    if not (request.user.is_superuser or request.user.is_manager):
         messages.error(request, 'У вас нет прав на создание сотрудников!')
-        return redirect('dashboard:home')  # ← исправлено
+        return redirect('dashboard:home')
 
     if request.method == 'POST':
         form = EmployeeCreateForm(request.POST, request.FILES)
@@ -143,9 +149,9 @@ def employee_edit(request, employee_id):
     """Редактирование сотрудника"""
     employee = get_object_or_404(Employee, id=employee_id)
 
-    if not request.user.is_superuser:
+    if not (request.user.is_superuser or request.user.is_manager):
         messages.error(request, 'У вас нет прав на редактирование!')
-        return redirect('dashboard:home')  # ← исправлено
+        return redirect('dashboard:home')
 
     if request.method == 'POST':
         form = EmployeeForm(request.POST, request.FILES, instance=employee)
@@ -156,7 +162,7 @@ def employee_edit(request, employee_id):
 
             messages.success(
                 request, f'Данные сотрудника {employee.full_name} успешно обновлены!')
-            return redirect('dashboard:home')  # ← исправлено
+            return redirect('dashboard:home')
     else:
         form = EmployeeForm(instance=employee)
         if employee.birth_date:
@@ -180,9 +186,9 @@ def employee_skills(request, employee_id):
     """Управление квалификациями сотрудника"""
     employee = get_object_or_404(Employee, id=employee_id)
 
-    if not request.user.is_superuser:
+    if not (request.user.is_superuser or request.user.is_manager):
         messages.error(request, 'У вас нет прав на управление квалификациями!')
-        return redirect('dashboard:home')  # ← исправлено
+        return redirect('dashboard:home')
 
     employee_skills = employee.employee_skills.select_related('skill').all()
     existing_skill_ids = employee_skills.values_list('skill_id', flat=True)
@@ -192,7 +198,7 @@ def employee_skills(request, employee_id):
         'employee': employee,
         'employee_skills': employee_skills,
         'available_skills': available_skills,
-        'can_edit': request.user.is_superuser,
+        'can_edit': request.user.is_superuser or request.user.is_manager,
     })
 
 
@@ -202,9 +208,9 @@ def employee_skill_add(request, employee_id):
     """Добавление квалификации сотруднику"""
     employee = get_object_or_404(Employee, id=employee_id)
 
-    if not request.user.is_superuser:
+    if not (request.user.is_superuser or request.user.is_manager):
         messages.error(request, 'У вас нет прав на добавление квалификаций!')
-        return redirect('dashboard:home')  # ← исправлено
+        return redirect('dashboard:home')
 
     if request.method == 'POST':
         skill_id = request.POST.get('skill_id')
@@ -239,9 +245,9 @@ def employee_skill_delete(request, employee_id, skill_id):
     """Удаление квалификации у сотрудника"""
     employee = get_object_or_404(Employee, id=employee_id)
 
-    if not request.user.is_superuser:
+    if not (request.user.is_superuser or request.user.is_manager):
         messages.error(request, 'У вас нет прав на удаление квалификаций!')
-        return redirect('dashboard:home')  # ← исправлено
+        return redirect('dashboard:home')
 
     employee_skill = get_object_or_404(
         EmployeeSkill, employee=employee, skill_id=skill_id)
@@ -258,9 +264,9 @@ def employee_workstations(request, employee_id):
     """Управление участками сотрудника"""
     employee = get_object_or_404(Employee, id=employee_id)
 
-    if not request.user.is_superuser:
+    if not (request.user.is_superuser or request.user.is_manager):
         messages.error(request, 'У вас нет прав на управление участками!')
-        return redirect('dashboard:home')  # ← исправлено
+        return redirect('dashboard:home')
 
     assignments = employee.workstation_assignments.select_related(
         'workstation').all()
@@ -273,7 +279,7 @@ def employee_workstations(request, employee_id):
         'employee': employee,
         'assignments': assignments,
         'available_workstations': available_workstations,
-        'can_edit': request.user.is_superuser,
+        'can_edit': request.user.is_superuser or request.user.is_manager,
     })
 
 
@@ -283,9 +289,9 @@ def employee_workstation_add(request, employee_id):
     """Добавление назначения на участок"""
     employee = get_object_or_404(Employee, id=employee_id)
 
-    if not request.user.is_superuser:
+    if not (request.user.is_superuser or request.user.is_manager):
         messages.error(request, 'У вас нет прав на добавление участков!')
-        return redirect('dashboard:home')  # ← исправлено
+        return redirect('dashboard:home')
 
     if request.method == 'POST':
         workstation_id = request.POST.get('workstation_id')
@@ -326,9 +332,9 @@ def employee_workstation_delete(request, employee_id, workstation_id):
     """Удаление назначения на участок"""
     employee = get_object_or_404(Employee, id=employee_id)
 
-    if not request.user.is_superuser:
+    if not (request.user.is_superuser or request.user.is_manager):
         messages.error(request, 'У вас нет прав на удаление участков!')
-        return redirect('dashboard:home')  # ← исправлено
+        return redirect('dashboard:home')
 
     assignment = get_object_or_404(
         EmployeeWorkstation, employee=employee, workstation_id=workstation_id)
@@ -346,10 +352,10 @@ def employee_workstation_set_primary(request, employee_id, workstation_id):
     """Установка основного участка"""
     employee = get_object_or_404(Employee, id=employee_id)
 
-    if not request.user.is_superuser:
+    if not (request.user.is_superuser or request.user.is_manager):
         messages.error(
             request, 'У вас нет прав на изменение основного участка!')
-        return redirect('dashboard:home')  # ← исправлено
+        return redirect('dashboard:home')
 
     EmployeeWorkstation.objects.filter(
         employee=employee, is_primary=True).update(is_primary=False)

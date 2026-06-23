@@ -42,7 +42,7 @@ def attendance_today(request):
     return render(request, 'attendance/today.html', {
         'employee_data': employee_data,
         'today': today,
-        'can_edit': request.user.is_superuser,
+        'can_edit': request.user.is_superuser or request.user.is_manager,
     })
 
 
@@ -137,7 +137,7 @@ def attendance_edit(request, attendance_id):
     attendance = get_object_or_404(DailyAttendance, id=attendance_id)
     next_url = request.GET.get('next')
 
-    if not request.user.is_superuser:
+    if not (request.user.is_superuser or request.user.is_manager):
         messages.error(request, 'У вас нет прав на редактирование!')
         return redirect('dashboard:attendance_today')
 
@@ -156,7 +156,6 @@ def attendance_edit(request, attendance_id):
             return redirect('dashboard:home')
     else:
         form = AttendanceForm(instance=attendance)
-        # Явно устанавливаем значение для record_date в initial
         form.initial['record_date'] = attendance.record_date.strftime(
             '%Y-%m-%d')
 
@@ -166,13 +165,14 @@ def attendance_edit(request, attendance_id):
         'next_url': next_url,
     })
 
+
 @login_required
 @user_passes_test(is_manager)
 def attendance_delete(request, attendance_id):
     """Удаление записи"""
     attendance = get_object_or_404(DailyAttendance, id=attendance_id)
 
-    if not request.user.is_superuser:
+    if not (request.user.is_superuser or request.user.is_manager):
         messages.error(request, 'У вас нет прав на удаление!')
         return redirect('dashboard:home')
 
@@ -212,7 +212,7 @@ def attendance_all(request):
         'selected_employee': employee_id,
         'date_from': date_from,
         'date_to': date_to,
-        'can_edit': request.user.is_superuser,
+        'can_edit': request.user.is_superuser or request.user.is_manager,
     })
 
 
@@ -277,5 +277,5 @@ def attendance_calendar(request, year=None, month=None):
         'month_name': ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
                        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'][month - 1],
         'today': today,
-        'can_edit': request.user.is_superuser,
+        'can_edit': request.user.is_superuser or request.user.is_manager,
     })
