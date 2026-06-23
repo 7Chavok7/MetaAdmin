@@ -6,4 +6,4 @@ class AttendanceConfig(AppConfig):
     name = 'meta_app.attendance'
 
     def ready(self):
-        import meta_app.attendance.signals  # noqa
+        import meta_app.attendance.signals

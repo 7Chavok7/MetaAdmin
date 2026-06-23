@@ -29,6 +29,7 @@ INSTALLED_APPS = [
     # # Сторонние приложения
     'crispy_forms',
     'crispy_bootstrap5',
+    'channels',
     
     # Наши приложения (meta_app)
     'meta_app.employees',
@@ -128,3 +129,15 @@ STATICFILES_DIRS = [
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# Channels
+ASGI_APPLICATION = 'config.asgi.application'
+
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+        },
+    },
+}
