@@ -117,38 +117,34 @@ class DailyAttendance(models.Model):
     def __str__(self):
         return f"{self.employee.full_name} - {self.record_date}"
 
+
     def save(self, *args, **kwargs):
         """Автоматически рассчитываем часы при сохранении"""
 
-        # Если сотрудник присутствовал и есть время начала и окончания
+        # 1. Обновляем is_present в зависимости от статуса
+        if self.status in ['absent', 'weekend', 'sick', 'vacation']:
+            self.is_present = False
+        else:
+            self.is_present = True
+
+        # 2. Рассчитываем часы
         if self.is_present and self.start_time and self.end_time:
-            # Рассчитываем часы вручную
             start = self.start_time
             end = self.end_time
 
-            # Переводим время в минуты
             start_minutes = start.hour * 60 + start.minute
             end_minutes = end.hour * 60 + end.minute
 
-            # Если конец дня раньше начала (ночная смена)
             if end_minutes < start_minutes:
                 end_minutes += 24 * 60
 
-            # Вычисляем разницу в минутах
             diff_minutes = end_minutes - start_minutes
 
-            # Вычитаем обед (1 час = 60 минут), если рабочий день больше 6 часов
-            if diff_minutes > 6 * 60:  # Если больше 6 часов
-                diff_minutes -= 60  # Вычитаем 1 час обеда
+            if diff_minutes > 6 * 60:
+                diff_minutes -= 60
 
-            # Переводим в часы
             hours = diff_minutes / 60
-
-            # Округляем до 2 знаков
-            self.actual_hours = round(hours, 2)
-
-            # Добавляем переработку
-            self.actual_hours = self.actual_hours + float(self.overtime_hours or 0)
+            self.actual_hours = round(hours, 2) + float(self.overtime_hours or 0)
         else:
             self.actual_hours = 0
 
