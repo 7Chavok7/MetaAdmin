@@ -13,7 +13,7 @@ SECRET_KEY = 'django-insecure-agnhfacyeo^+8s5uwh-m+m!s#+xa0#@@arg@66=g!opx6bks!6
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -27,14 +27,15 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     
     # # Сторонние приложения
-    # 'crispy_forms',
-    # 'cryspy_bootstrap5',
+    'crispy_forms',
+    'crispy_bootstrap5',
     
     # Наши приложения (meta_app)
     'meta_app.employees',
     'meta_app.workstations',
     'meta_app.attendance',
     'meta_app.dashboard',
+
 ]
 
 MIDDLEWARE = [
@@ -116,11 +117,12 @@ LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/login/'
 
-
 # Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.0/howto/static-files/
-
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = '/app/staticfiles'  # ← добавить эту строку
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field

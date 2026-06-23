@@ -1,0 +1,46 @@
+services:
+  db:
+    image: postgres:15
+    container_name: metaadmin-db
+    environment:
+      POSTGRES_DB: ${DB_NAME:-metaadmin_db}
+      POSTGRES_USER: ${DB_USER:-metaadmin_user}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secure_password}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - metaadmin_network
+
+  web:
+    build: .
+    container_name: metaadmin-web
+    ports:
+      - "8000:8000"
+    volumes:
+      - .:/app
+      - ./media:/app/media
+      - ./staticfiles:/app/staticfiles
+      - ./logs:/app/logs
+    environment:
+      - DJANGO_SECRET_KEY=${DJANGO_SECRET_KEY}
+      - DEBUG=${DEBUG:-True}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - DB_ENGINE=django.db.backends.postgresql
+      - DB_NAME=${DB_NAME:-metaadmin_db}
+      - DB_USER=${DB_USER:-metaadmin_user}
+      - DB_PASSWORD=${DB_PASSWORD:-secure_password}
+      - DB_HOST=db
+      - DB_PORT=5432
+    depends_on:
+      - db
+    restart: unless-stopped
+    networks:
+      - metaadmin_network
+
+volumes:
+  postgres_data:
+
+networks:
+  metaadmin_network:
+    driver: bridge
