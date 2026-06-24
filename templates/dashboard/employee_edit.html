@@ -52,6 +52,14 @@
                         <div class="text-danger small">{{ form.birth_date.errors }}</div>
                         {% endif %}
                     </div>
+
+                    <div class="mb-3">
+                        <label for="{{ form.phone_number.id_for_label }}" class="form-label">№ телефона</label>
+                        {{ form.phone_number }}
+                        {% if form.phone_number.errors %}
+                        <div class="text-danger small">{{ form.phone_nuber.errors }}</div>
+                        {% endif %}
+                    </div>
                 
                     <div class="row">
                         <div class="col-md-6">

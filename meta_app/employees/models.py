@@ -78,6 +78,8 @@ class Employee(AbstractUser):
         null=True,
         verbose_name='Номер карточки'
     )
+    
+    
 
     is_active = models.BooleanField(
         default=True,
@@ -106,6 +108,12 @@ class Employee(AbstractUser):
         blank=True,
         null=True,
         verbose_name='Дата рождения'
+    )
+    phone_number = models.CharField(
+        max_length=13,
+        blank=True,
+        null=True,
+        verbose_name='Номер телефона'
     )
     photo = models.ImageField(
         upload_to='employees/',

@@ -15,6 +15,7 @@ class EmployeeForm(forms.ModelForm):
             'first_name',
             'patronymic',
             'birth_date',
+            'phone_number',
             'photo',
             'registration_address',
             'residence_address',
@@ -34,6 +35,7 @@ class EmployeeForm(forms.ModelForm):
         ]
         widgets = {
             'birth_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'phone_number': forms.TextInput(attrs={'class': 'form-control'}),
             'hire_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'dismissal_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'registration_address': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
@@ -63,6 +65,7 @@ class EmployeeForm(forms.ModelForm):
             'first_name': 'Имя',
             'patronymic': 'Отчество',
             'birth_date': 'Дата рождения',
+            'phone_number': '№ телефона',
             'photo': 'Фото',
             'registration_address': 'Место регистрации',
             'residence_address': 'Место проживания',
@@ -110,6 +113,7 @@ class EmployeeCreateForm(forms.ModelForm):
             'first_name',
             'patronymic',
             'birth_date',
+            'phone_number',
             'photo',
             'registration_address',
             'residence_address',
@@ -129,6 +133,7 @@ class EmployeeCreateForm(forms.ModelForm):
         ]
         widgets = {
             'birth_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'phone_number': forms.TextInput(attrs={'class': 'form-control'}),
             'hire_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'dismissal_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'registration_address': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
@@ -158,6 +163,7 @@ class EmployeeCreateForm(forms.ModelForm):
             'first_name': 'Имя',
             'patronymic': 'Отчество',
             'birth_date': 'Дата рождения',
+            'phone_number': '№ телефона',
             'photo': 'Фото',
             'registration_address': 'Место регистрации',
             'residence_address': 'Место проживания',

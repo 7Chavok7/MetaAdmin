@@ -15,7 +15,7 @@
 </div>
 
 <div class="row">
-    <div class="col-md-4">
+    <div class="col-md-5">
         <div class="card shadow-sm">
             <div class="card-body text-center">
                 {% if employee.photo %}
@@ -27,10 +27,15 @@
                     {{ employee.last_name|slice:":1" }}
                 </div>
                 {% endif %}
-                
+                <!--Дата рождения в карточке-->
                 <h3>{{ employee.full_name }}</h3>
                 <p class="text-muted">
-                    <i class="bi bi-calendar3"></i><!-- Дата рождения: --> {{ employee.birth_date|date:"d.m.Y" }}
+                    <i class="bi bi-cake"></i><!-- Дата рождения: --> {{ employee.birth_date|date:"d.m.Y" }}
+                </p>
+
+                <!--Номер телефона в карточке-->
+                <p class="text-muted">
+                    <i class="bi bi-telephone"></i> {{ employee.phone_number }}
                 </p>
 
                 <div class="d-flex justify-content-center gap-2 flex-wrap">
@@ -50,25 +55,69 @@
                 </div>            
                 <!--<div class="card-header">
                     <h5 class="mb-0"><i class="bi bi-person-vcard"></i> Анкетные данные</h5>
-                </div>-->
-                <hr>
-                <div class="row">
-                    <div class="col-6">
-                        <dt class="text-muted">Семейное положение</dt>
-                        <dd>{{ employee.get_marital_status_display|default:"-" }}</dd>
+                    </div>-->
+                    <div class="card shadow-sm mt-3">
+                        <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center"
+                                style="cyrsor: pointer;"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#regAddress"
+                                aria-expanded="true"
+                                aria-controls="regAddres">
+                            <h5 class="mb-0"><i class="bi bi-house"></i> Адреса</h5>
+                            <span class="badge bg-light text-dark">
+                                <i class="bi bi-chevron-down"></i>
+                            </span>
+                        </div>
+                        <div class="collapse" id="regAddress">
+                            <div class="card-body">
+    
+                                <div class="col-12">
+                                    <dt class="text-muted">Адрес регистрации</dt>
+                                    <dd>{{ employee.registration_address|default:"-----" }}</dd>
+                                </div>
+                                <div class="col-12">
+                                    <dt class="text-muted">Адрес проживания</dt>
+                                    <dd>{{ employee.residence_address|default:"-----" }}</dd>
+                                </div>
+     
+                            </div>
+                        </div>
                     </div>
-                    <div class="col-6">
-                        <dt class="text-muted">Дети</dt>
-                        <dd>
-                            {% if employee.has_children %}
-                            {{ employee.children_count }} чел.
-                            {% else %}
-                            Нет
-                            {% endif %}
-                        </dd>
+
+                <div class="card shadow-sm mt-3">
+                    <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center"
+                            style="cyrsor: pointer;"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#famalyBlock"
+                            aria-expanded="true"
+                            aria-controls="famalyBlock">
+                        <h5 class="mb-0"><i class="bi bi-people"></i> Семья</h5>
+                        <span class="badge bg-light text-dark">
+                            <i class="bi bi-chevron-down"></i>
+                        </span>
+                    </div>
+                    <div class="collapse" id="famalyBlock">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-8">
+                                    <dt class="text-muted">Семейное положение</dt>
+                                    <dd>{{ employee.get_marital_status_display|default:"-" }}</dd>
+                                </div>
+                                <div class="col-4">
+                                    <dt class="text-muted">Дети</dt>
+                                    <dd>{% if employee.has_children %}
+                                            {{ employee.children_count }} чел.
+                                        {% else %}
+                                            Нет
+                                        {% endif %}
+                                    </dd>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
-                <hr>
+
+                {% comment %} <hr>
                 <div class="row">
                     <div class="col-12">
                         <dt class="text-muted">Место регистрации</dt>
@@ -78,7 +127,7 @@
                         <dd>{{ employee.residence_address|default:"-"|linebreaks }}</dd>
                     </div>
                 </div>
-                <hr>
+                <hr> {% endcomment %}
                 
                 
                 <div class="row">
@@ -124,7 +173,7 @@
         </div>
     </div>
 
-    <div class="col-md-8">
+    <div class="col-md-7">
         <div class="card shadow-sm">
             <div class="card-body">
 
