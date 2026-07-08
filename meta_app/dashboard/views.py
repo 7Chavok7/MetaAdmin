@@ -68,6 +68,10 @@ def employee_list(request):
 def employee_detail(request, employee_id):
     """Карточка сотрудника"""
     employee = get_object_or_404(Employee, id=employee_id)
+    
+    today = timezone.now().date()
+    current_month = today.month
+    current_year = today.year
 
     # Обычный сотрудник видит только себя
     if not (request.user.is_superuser or request.user.is_manager):
@@ -87,10 +91,23 @@ def employee_detail(request, employee_id):
     workstation_assignments = employee.workstation_assignments.select_related(
         'workstation').all()
 
-    # Получаем записи о работе за последние 30 дней
-    thirty_days_ago = timezone.now().date() - timedelta(days=30)
+    # Получаем месяц и год из GET-параметров
+    today = timezone.now().date()
+    month = int(request.GET.get('month', today.month))
+    year = int(request.GET.get('year', today.year))
+
+    # Проверяем, что месяц в диапазоне 1-12
+    if month < 1:
+        month = 12
+        year -= 1
+    elif month > 12:
+        month = 1
+        year += 1
+
+    # Получаем записи о работе за выбранный месяц
     attendances = employee.attendances.filter(
-        record_date__gte=thirty_days_ago
+        record_date__year=year,
+        record_date__month=month
     ).order_by('-record_date')
 
     # Считаем статистику за месяц
@@ -99,6 +116,10 @@ def employee_detail(request, employee_id):
     total_overtime = sum([att.overtime_hours for att in attendances])
     work_days = attendances.filter(is_present=True).count()
     avg_hours = total_hours / work_days if work_days > 0 else 0
+
+    # Названия месяцев
+    months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+              'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
 
     return render(request, 'dashboard/employee_detail.html', {
         'employee': employee,
@@ -112,6 +133,15 @@ def employee_detail(request, employee_id):
             'avg_hours': avg_hours,
         },
         'can_edit': request.user.is_superuser or request.user.is_manager,
+        'current_month': current_month,
+        'current_year': current_year,
+        'month_name': months[month - 1],
+        'month': month,
+        'year': year,
+        'prev_month': month - 1 if month > 1 else 12,
+        'prev_year': year if month > 1 else year - 1,
+        'next_month': month + 1 if month < 12 else 1,
+        'next_year': year if month < 12 else year + 1,
     })
 
 

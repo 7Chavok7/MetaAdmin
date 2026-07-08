@@ -219,9 +219,11 @@ def attendance_all(request):
 @login_required
 @user_passes_test(is_manager)
 def attendance_calendar(request, year=None, month=None):
-    """Календарь посещаемости в виде таблицы"""
+    """Календарь посещаемости с группировкой по основным участкам"""
     from calendar import monthrange
     from datetime import date
+    from collections import defaultdict
+    from meta_app.workstations.models import Workstation
 
     today = timezone.now().date()
     if not year:
@@ -242,40 +244,79 @@ def attendance_calendar(request, year=None, month=None):
             'is_weekend': current_date.weekday() >= 5,
         })
 
+    # Получаем всех активных сотрудников с их основным участком
     employees = Employee.objects.filter(
         is_active=True,
         is_superuser=False
     ).order_by('last_name', 'first_name')
 
-    month_attendances = {}
-    month_totals = {}
+    # Группируем сотрудников по основному участку
+    grouped_employees = defaultdict(list)
 
     for employee in employees:
-        attendances = DailyAttendance.objects.filter(
-            employee=employee,
-            record_date__year=year,
-            record_date__month=month
-        )
+        # Находим основной участок сотрудника
+        primary_workstation = employee.workstation_assignments.filter(
+            is_primary=True).first()
 
-        day_dict = {}
-        total_hours = 0
-        for att in attendances:
-            day_dict[att.record_date.day] = att
-            if att.is_present:
-                total_hours += att.actual_hours
+        # Если основного участка нет — определяем в группу "Без участка"
+        if primary_workstation:
+            workstation_name = primary_workstation.workstation.name
+            workstation_id = primary_workstation.workstation.id
+        else:
+            workstation_name = "Без участка"
+            workstation_id = 0
 
-        month_attendances[employee.id] = day_dict
-        month_totals[employee.id] = total_hours
+        grouped_employees[(workstation_id, workstation_name)].append(employee)
+
+    # Сортируем группы: сначала по имени участка (кроме "Без участка" в конце)
+    def sort_key(item):
+        ws_id, ws_name = item[0]
+        if ws_id == 0:
+            return (999, ws_name)  # "Без участка" в конце
+        return (ws_id, ws_name)
+
+    sorted_groups = sorted(grouped_employees.items(), key=sort_key)
+
+    # Собираем данные для каждой группы
+    group_data = []
+    for (ws_id, ws_name), employees_in_group in sorted_groups:
+        # Сортируем сотрудников в группе по фамилии
+        employees_in_group = sorted(
+            employees_in_group, key=lambda e: e.last_name)
+
+        # Получаем данные посещаемости для сотрудников группы
+        month_attendances = {}
+        month_totals = {}
+        for employee in employees_in_group:
+            attendances = DailyAttendance.objects.filter(
+                employee=employee,
+                record_date__year=year,
+                record_date__month=month
+            )
+            day_dict = {}
+            total_hours = 0
+            for att in attendances:
+                day_dict[att.record_date.day] = att
+                if att.is_present:
+                    total_hours += att.actual_hours
+            month_attendances[employee.id] = day_dict
+            month_totals[employee.id] = total_hours
+
+        group_data.append({
+            'workstation_name': ws_name,
+            'workstation_id': ws_id,
+            'employees': employees_in_group,
+            'month_attendances': month_attendances,
+            'month_totals': month_totals,
+        })
 
     return render(request, 'attendance/calendar.html', {
-        'employees': employees,
-        'month_attendances': month_attendances,
-        'month_totals': month_totals,
+        'group_data': group_data,
         'days_in_month': days_in_month_list,
         'year': year,
         'month': month,
         'month_name': ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
                        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'][month - 1],
         'today': today,
-        'can_edit': request.user.is_superuser or request.user.is_manager,
+        'can_edit': request.user.is_superuser,
     })
