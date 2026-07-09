@@ -106,14 +106,14 @@
                     </div>
                     <div class="collapse" id="regAddress">
                         <div class="card-body">
-
                             <div class="col-12">
                                 <dt class="text-muted">Адрес регистрации</dt>
-                                <dd>{{ employee.registration_address|default:"-----" }}</dd>
+                                <dd class="text-start">{{ employee.registration_address|default:"-----" }}</dd>
                             </div>
+                            <hr>
                             <div class="col-12">
                                 <dt class="text-muted">Адрес проживания</dt>
-                                <dd>{{ employee.residence_address|default:"-----" }}</dd>
+                                <dd class="text-start">{{ employee.residence_address|default:"-----" }}</dd>
                             </div>
     
                         </div>
@@ -169,11 +169,11 @@
                     <div class="collapse" id="educationBlock">
                         <div class="card-body">
                             <div class="row">
-                                <div class="col-8">
+                                <div class="col-12">
                                     <dd class="text-start">
                                         <strong>Специальность:</strong> {{ employee.education_specialty|default:"-" }}<br>
                                         <strong>Учебное заведение:</strong> {{ employee.education_institution|default:"-" }}<br>
-                                    <strong>Год окончания:</strong> {{ employee.education_year|default:"-" }}
+                                        <strong>Год окончания:</strong> {{ employee.education_year|default:"-" }}
                                     </dd>
                                 </div>
                             </div>
