@@ -37,32 +37,35 @@
     </div>
     <div class="card-body p-0">
         <div class="table-responsive">
-            {% for group in group_data %}
-                <!-- Заголовок группы -->
-                <div class="bg-light p-2 border-bottom fw-bold">
-                    <i class="bi bi-building"></i> {{ group.workstation_name }}
-                    <span class="badge bg-secondary ms-2">{{ group.employees|length }}</span>
-                </div>
-                
-                <!-- Таблица сотрудников группы -->
-                <table class="table table-bordered table-hover mb-0" style="font-size: 11px;">
-                    <thead class="table-light text-center">
-                        <tr>
-                            <th style="min-width: 120px; max-width: 120px; position: sticky; left: 0; background: #f8f9fa; z-index: 1; font-size: 11px;">ФИО</th>
-                            <th style="min-width: 30px; max-width: 30px; background: #f8f9fa; font-size: 10px;">Таб.</th>
-                            {% for day in days_in_month %}
-                            <th style="min-width: 28px; max-width: 28px; 
-                                       {% if day.weekday >= 5 %}background: #f8d7da; color: #721c24;{% endif %}
-                                       {% if day.date == today %}background: #fff3cd;{% endif %}
-                                       font-size: 10px; padding: 2px;">
-                                {{ day.day }}
-                                <br><small style="font-weight: normal; font-size: 7px;">{{ day.weekday_short }}</small>
-                            </th>
-                            {% endfor %}
-                            <th style="min-width: 45px; max-width: 45px; background: #f8f9fa; position: sticky; right: 0; z-index: 1; font-size: 10px;">Итого</th>
+            <table class="table table-bordered table-hover mb-0" style="font-size: 11px;">
+                <!-- ОДНА ОБЩАЯ ШАПКА -->
+                <thead class="table-light text-center">
+                    <tr>
+                        <th style="min-width: 120px; max-width: 120px; position: sticky; left: 0; background: #f8f9fa; z-index: 1; font-size: 11px;">ФИО</th>
+                        <th style="min-width: 30px; max-width: 30px; background: #f8f9fa; font-size: 10px;">Таб.</th>
+                        {% for day in days_in_month %}
+                        <th style="min-width: 28px; max-width: 28px; 
+                                   {% if day.weekday >= 5 %}background: #f8d7da; color: #721c24;{% endif %}
+                                   {% if day.date == today %}background: #fff3cd;{% endif %}
+                                   font-size: 10px; padding: 2px;">
+                            {{ day.day }}
+                            <br><small style="font-weight: normal; font-size: 7px;">{{ day.weekday_short }}</small>
+                        </th>
+                        {% endfor %}
+                        <th style="min-width: 45px; max-width: 45px; background: #f8f9fa; position: sticky; right: 0; z-index: 1; font-size: 10px;">Итого</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for group in group_data %}
+                        <!-- Заголовок группы (НЕ шапка) -->
+                        <tr class="bg-light">
+                            <td colspan="{{ days_in_month|length|add:3 }}" style="padding: 4px 8px; font-weight: bold; border-bottom: 2px solid #c1c2c3; background-color: #aaaaaa;">
+                                <i class="bi bi-building"></i> {{ group.workstation_name }}
+                                {% comment %} <span class="badge bg-secondary ms-2">{{ group.employees|length }}</span> {% endcomment %}
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
+                        
+                        <!-- Строки сотрудников группы -->
                         {% for employee in group.employees %}
                         <tr>
                             <td style="position: sticky; left: 0; background: white; z-index: 1; font-weight: 500; font-size: 11px; padding: 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;">
@@ -132,13 +135,15 @@
                             </td>
                         </tr>
                         {% endfor %}
-                    </tbody>
-                </table>
-            {% empty %}
-                <div class="text-center py-4">
-                    <p class="text-muted">Нет сотрудников</p>
-                </div>
-            {% endfor %}
+                    {% empty %}
+                        <tr>
+                            <td colspan="{{ days_in_month|length|add:3 }}" class="text-center py-4">
+                                <p class="text-muted">Нет сотрудников</p>
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
