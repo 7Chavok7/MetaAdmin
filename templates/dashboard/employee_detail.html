@@ -71,10 +71,10 @@
                     {% endif %}
                 </div>     
                 <hr>       
-                <!--<div class="card-header">
+                {% comment %} <div class="card-header">
                     <h5 class="mb-0"><i class="bi bi-person-vcard"></i> Анкетные данные</h5>
-                    </div>-->
-                        <!--Дата приема и увольнения-->
+                </div> {% endcomment %}
+                <!--Дата приема и увольнения-->
                 <div class="row">
                     <div class="col-md-6">
                         <div>
@@ -120,7 +120,7 @@
                     </div>
                 </div>
 
-                <div class="card shadow-sm mt-3">
+                <div class="card shadow-sm">
                     <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center"
                             style="cyrsor: pointer;"
                             data-bs-toggle="collapse"
@@ -151,58 +151,96 @@
                             </div>
                         </div>
                     </div>
-                </div>
+                </div>     
 
-                {% comment %} <hr>
-                <div class="row">
-                    <div class="col-12">
-                        <dt class="text-muted">Место регистрации</dt>
-                        <dd>{{ employee.registration_address|default:"-"|linebreaks }}</dd>
-                        
-                        <dt class="text-muted">Место проживания</dt>
-                        <dd>{{ employee.residence_address|default:"-"|linebreaks }}</dd>
-                    </div>
-                </div>
-                <hr> {% endcomment %}
-                
-                
-                <div class="row">
-                    <div class="col-sm-12">
-                        <dt class="text-muted">Военная обязанность</dt>
-                        <dd>{{ employee.get_military_status_display|default:"-" }}</dd>
-                    </div>
-                </div>
-                <hr>
-                <div class="row">
-                    <div class="col-sm-12">
-                        <dt class="text-muted">Образование</dt>
-                        <dd>
-                            <strong>Специальность:</strong> {{ employee.education_specialty|default:"-" }}<br>
-                            <strong>Учебное заведение:</strong> {{ employee.education_institution|default:"-" }}<br>
-                            <strong>Год окончания:</strong> {{ employee.education_year|default:"-" }}
-                        </dd>
+                <!-- ОБРАЗОВАНИЕ -->    
+                <div class="card shadow-sm">
+                    <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center"
+                                style="cyrsor: pointer;"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#educationBlock"
+                                aria-expanded="true"
+                                aria-controls="educationBlock">
+                        <h5 class="mb-0"><i class="bi bi-book"></i> Образование</h5> 
+                        <span class="badge bg-light text-dark">
+                            <i class="bi bi-chevron-down"></i>
+                        </span>
+                    </div>      
+                    <div class="collapse" id="educationBlock">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-8">
+                                    <dd class="text-start">
+                                        <strong>Специальность:</strong> {{ employee.education_specialty|default:"-" }}<br>
+                                        <strong>Учебное заведение:</strong> {{ employee.education_institution|default:"-" }}<br>
+                                    <strong>Год окончания:</strong> {{ employee.education_year|default:"-" }}
+                                    </dd>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                <hr>
+                <!-- ВОЕНКА -->
+                <div class="card shadow-sm">
+                    <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center"
+                                style="cyrsor: pointer;"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#millitaryBlock"
+                                aria-expanded="true"
+                                aria-controls="millitaryBlock">
+                        <h5 class="mb-0"><i class="bi bi-shield"></i> Военная обязанность</h5> 
+                        <span class="badge bg-light text-dark">
+                            <i class="bi bi-chevron-down"></i>
+                        </span>
+                    </div>      
+                    <div class="collapse" id="millitaryBlock">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-12">
+                                    <dd>
+                                        <strong>{{ employee.get_military_status_display|default:"-" }}</strong>
+                                    </dd>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-                <div class="row">
-                    <div class="col-12">
-                        <dt class="text-muted">Предыдущие места работы</dt>
-                        <dd>
-                            {% if employee.previous_work_1 %}
-                            <strong>1.</strong> {{ employee.previous_work_1|linebreaksbr }}<br>
-                            {% endif %}
-                            {% if employee.previous_work_2 %}
-                            <strong>2.</strong> {{ employee.previous_work_2|linebreaksbr }}<br>
-                            {% endif %}
-                            {% if employee.previous_work_3 %}
-                            <strong>3.</strong> {{ employee.previous_work_3|linebreaksbr }}
-                            {% endif %}
-                            {% if not employee.previous_work_1 and not employee.previous_work_2 and not employee.previous_work_3 %}
-                            Не указано
-                            {% endif %}
-                        </dd>
+                <!-- Предыдущие места работы -->
+                <div class="card shadow-sm">
+                    <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center"
+                                style="cyrsor: pointer;"
+                                data-bs-toggle="collapse"
+                                data-bs-target="#placeWorksBlock"
+                                aria-expanded="true"
+                                aria-controls="placeWorksBlock">
+                        <h5 class="mb-0"><i class="bi bi-briefcase-fill"></i> Предыдущие места работы</h5> 
+                        <span class="badge bg-light text-dark">
+                            <i class="bi bi-chevron-down"></i>
+                        </span>
+                    </div>      
+                    <div class="collapse" id="placeWorksBlock">
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-12">
+                                    <dd>
+                                    {% if employee.previous_work_1 %}
+                                    <strong>1.</strong> {{ employee.previous_work_1|linebreaksbr }}<br>
+                                    {% endif %}
+                                    {% if employee.previous_work_2 %}
+                                    <strong>2.</strong> {{ employee.previous_work_2|linebreaksbr }}<br>
+                                    {% endif %}
+                                    {% if employee.previous_work_3 %}
+                                    <strong>3.</strong> {{ employee.previous_work_3|linebreaksbr }}
+                                    {% endif %}
+                                    {% if not employee.previous_work_1 and not employee.previous_work_2 and not employee.previous_work_3 %}
+                                    Не указано
+                                    {% endif %}
+                                    </dd>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -215,7 +253,7 @@
             <div class="card-body">
 
                 <!-- Участки -->
-                <div class="card shadow-sm mt-3">
+                <div class="card shadow-sm">
                     <div class="card-header bg-info text-white d-flex justify-content-between align-items-center">
                         <h5 class="mb-0"><i class="bi bi-building"></i> Участки работы</h5>
                         {% if can_edit %}
@@ -360,8 +398,7 @@
         </div>
 
                 <!-- Аудит -->
-
-        <div class="card shadow-sm">
+        <div class="card shadow-sm mt-3">
             <div class="card-body">
                 <div class="row">
                     <div class="col-12"><div class="card-header bg-secondary text-white">
@@ -375,7 +412,7 @@
                                 {% else %}
                                 Система
                                 {% endif %}
-                                <small class="text-muted">({{ employee.created_at|date:"d.m.Y H:i" }})</small>
+                                <small class="text-muted">({{ employee.created_at|date:"d.m.y H:i" }})</small>
                             </dd>
                             
                             <dt class="text-muted">Последнее изменение</dt>
@@ -385,7 +422,7 @@
                                 {% else %}
                                 Не редактировался
                                 {% endif %}
-                                <small class="text-muted">({{ employee.updated_at|date:"d.m.Y H:i" }})</small>
+                                <small class="text-muted">({{ employee.updated_at|date:"d.m.y H:i" }})</small>
                             </dd>
                         </dl>
                     </div>
