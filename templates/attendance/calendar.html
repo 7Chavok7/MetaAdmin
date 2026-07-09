@@ -7,9 +7,9 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1><i class="bi bi-calendar3"></i> Календарь посещаемости</h1>
     <div>
-        <a href="{% url 'dashboard:attendance_today' %}" class="btn btn-outline-secondary">
+        {% comment %} <a href="{% url 'dashboard:attendance_today' %}" class="btn btn-outline-secondary">
             <i class="bi bi-clock-history"></i> Сегодня
-        </a>
+        </a> {% endcomment %}
         <a href="{% url 'dashboard:attendance_all' %}" class="btn btn-outline-secondary">
             <i class="bi bi-list-ul"></i> Все записи
         </a>
@@ -68,14 +68,14 @@
                         <!-- Строки сотрудников группы -->
                         {% for employee in group.employees %}
                         <tr>
-                            <td style="position: sticky; left: 0; background: white; z-index: 1; font-weight: 500; font-size: 11px; padding: 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;">
+                            <td style="position: sticky; left: 0; background: white; z-index: 1; font-weight: 500; font-size: 14px; padding-left: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;">
                                 <a href="{% url 'dashboard:employee_detail' employee.id %}" 
                                    style="color: #212529; text-decoration: none; cursor: pointer;"
                                    title="Перейти в карточку {{ employee.full_name }}">
                                     {{ employee.last_name }} {{ employee.first_name|slice:":1" }}.{% if employee.patronymic %}{{ employee.patronymic|slice:":1" }}.{% endif %}
                                 </a>
                             </td>
-                            <td class="text-center" style="font-size: 9px; padding: 2px;">{{ employee.employee_id }}</td>
+                            <td class="text-center" style="font-size: 9px; padding: 2px;">{{ employee.employee_id|slice:"3:" }}</td>
                             
                             {% for day in days_in_month %}
                                 {% with day_attendance=group.month_attendances|get_item:employee.id %}
@@ -92,7 +92,7 @@
                                                 padding: 1px; min-width: 28px; max-width: 28px; height: 28px;"
                                                 onclick="window.location.href='{% url 'dashboard:attendance_edit' att.id %}?next={{ request.get_full_path }}'"
                                                 title="{{ employee.full_name }}: {{ att.get_status_display }}, {{ att.actual_hours|floatformat:1 }} ч.">
-                                                <span style="font-size: 9px;">
+                                                <span style="font-size: 10px;">
                                                     {% if att.status == 'present' %}✓
                                                     {% elif att.status == 'absent' %}✗
                                                     {% elif att.status == 'weekend' %}В
@@ -100,7 +100,7 @@
                                                     {% elif att.status == 'vacation' %}О
                                                     {% endif %}
                                                 </span>
-                                                <br><small style="font-size: 6px;">{{ att.actual_hours|floatformat:1 }}</small>
+                                                <br><small style="font-size: 8px;">{{ att.actual_hours|floatformat:1 }}</small>
                                             </td>
                                         {% endwith %}
                                     {% else %}
@@ -108,7 +108,7 @@
                                             <td class="text-center" style="
                                                 background: #fce4e4; 
                                                 border: 1px solid #f5c6cb;
-                                                font-size: 9px;
+                                                font-size: 10px;
                                                 cursor: pointer;
                                                 padding: 1px; min-width: 28px; max-width: 28px; height: 28px;"
                                                 onclick="window.location.href='{% url 'dashboard:attendance_create' employee.id %}?date={{ year }}-{{ month|stringformat:"02d" }}-{{ day.day|stringformat:"02d" }}&next={{ request.get_full_path }}'"
@@ -128,7 +128,7 @@
                                 {% endwith %}
                             {% endfor %}
                             
-                            <td class="text-center fw-bold" style="position: sticky; right: 0; background: white; z-index: 1; font-size: 11px; padding: 2px; min-width: 45px; max-width: 45px;">
+                            <td class="text-center fw-bold" style="position: sticky; right: 0; background: white; z-index: 1; font-size: 14px; padding: 2px; min-width: 45px; max-width: 45px;">
                                 {% with total=group.month_totals|get_item:employee.id %}
                                     {{ total|floatformat:1 }}
                                 {% endwith %}
@@ -163,18 +163,18 @@
             <span><span class="badge bg-light text-dark border">+</span> Создать запись</span>
             <span><span class="badge" style="background: #fce4e4; color: #721c24; border: 1px solid #f5c6cb;">Сб/Вс</span> Выходные дни</span>
         </div>
-        <div class="mt-2">
+        {% comment %} <div class="mt-2">
             <small class="text-muted">Кликните на ячейку для редактирования записи</small>
-        </div>
+        </div> {% endcomment %}
     </div>
 </div>
 
 <!-- Кнопка для печати -->
-<div class="mt-3 text-end">
+{% comment %} <div class="mt-3 text-end">
     <button onclick="window.print()" class="btn btn-outline-secondary">
         <i class="bi bi-printer"></i> Печать
     </button>
-</div>
+</div> {% endcomment %}
 
 <!-- Стили -->
 <style>

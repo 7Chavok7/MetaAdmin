@@ -78,18 +78,39 @@
     </nav>
 
     <div class="container mt-4">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
-        
         {% block content %}
         {% endblock %}
+        
     </div>
+
+    <!-- СООБЩЕНИЯ -->
+    {% if messages %}
+    <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 9999;">
+        {% for message in messages %}
+            <div class="toast show align-items-center  border-0 
+                        {% if message.tags == 'success' %}bg-success text-white
+                        {% elif message.tags == 'error' %}bg-danger text-white
+                        {% elif message.tags == 'warning' %}bg-warning text-dark
+                        {% elif message.tags == 'info' %}bg-info text-dark
+                        {% else %}bg-secondary{% endif %}" 
+                 role="alert" aria-live="assertive" aria-atomic="true">
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="bi 
+                            {% if message.tags == 'success' %}bi-check-circle
+                            {% elif message.tags == 'error' %}bi-x-circle
+                            {% elif message.tags == 'warning' %}bi-exclamation-triangle
+                            {% elif message.tags == 'info' %}bi-info-circle
+                            {% else %}bi-chat{% endif %} me-2">
+                        </i>
+                        {{ message }}
+                    </div>
+                    <button type="button" class="btn-close btn-close-dark me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>

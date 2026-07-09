@@ -178,7 +178,7 @@ def attendance_delete(request, attendance_id):
 
     employee_name = attendance.employee.full_name
     attendance.delete()
-    messages.success(request, f'Запись для {employee_name} удалена!')
+    messages.warning(request, f'Запись для {employee_name} удалена!')
     return redirect('dashboard:home')
 
 
