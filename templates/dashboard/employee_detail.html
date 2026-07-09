@@ -3,20 +3,37 @@
 {% block title %}{{ employee.full_name }} - MetaAdmin{% endblock %}
 
 {% block content %}
-<div class="mb-3">
-    <a href="{% url 'dashboard:employee_list' %}" class="btn btn-outline-secondary">
-        <i class="bi bi-arrow-left"></i> Назад к списку
-    </a>
-    {% if can_edit %}
-    <a href="{% url 'dashboard:employee_edit' employee.id %}" class="btn btn-primary">
-        <i class="bi bi-pencil"></i> Редактировать
-    </a>
-    {% endif %}
+<div class="row">
+    {% comment %} <!--Дата приема и увольнения-->
+    <div class="col-md-3">
+        <div>
+            <div class="text-muted">Дата приема: <b>{{ employee.hire_date|date:"d.m.Y" }}</b></div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div>
+            {% if employee.dismissal_date %}
+            <div class="text-muted">Дата увольнения: <b>{{ employee.dismissal_date|date:"d.m.Y" }}</b></div>
+            {% else %}
+            <div class="text-muted">Стаж: <b>{{ employee.experience_display }}</b></div>
+            {% endif %}
+        </div>
+    </div> {% endcomment %}
+    <div class="col">
+        <a href="{% url 'dashboard:employee_list' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад к списку
+        </a>
+        {% if can_edit %}
+        <a href="{% url 'dashboard:employee_edit' employee.id %}" class="btn btn-primary">
+            <i class="bi bi-pencil"></i> Редактировать
+        </a>
+        {% endif %}
+    </div>
 </div>
 
 <div class="row">
     <div class="col-md-5">
-        <div class="card shadow-sm">
+        <div class="card shadow-sm mt-3">
             <div class="card-body text-center">
                 {% if employee.photo %}
                 <img src="{{ employee.photo.url }}" alt="{{ employee.full_name }}" 
@@ -52,37 +69,56 @@
                         <i class="bi bi-x-circle"></i> Уволен
                     </span>
                     {% endif %}
-                </div>            
+                </div>     
+                <hr>       
                 <!--<div class="card-header">
                     <h5 class="mb-0"><i class="bi bi-person-vcard"></i> Анкетные данные</h5>
                     </div>-->
-                    <div class="card shadow-sm mt-3">
-                        <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center"
-                                style="cyrsor: pointer;"
-                                data-bs-toggle="collapse"
-                                data-bs-target="#regAddress"
-                                aria-expanded="true"
-                                aria-controls="regAddres">
-                            <h5 class="mb-0"><i class="bi bi-house"></i> Адреса</h5>
-                            <span class="badge bg-light text-dark">
-                                <i class="bi bi-chevron-down"></i>
-                            </span>
-                        </div>
-                        <div class="collapse" id="regAddress">
-                            <div class="card-body">
-    
-                                <div class="col-12">
-                                    <dt class="text-muted">Адрес регистрации</dt>
-                                    <dd>{{ employee.registration_address|default:"-----" }}</dd>
-                                </div>
-                                <div class="col-12">
-                                    <dt class="text-muted">Адрес проживания</dt>
-                                    <dd>{{ employee.residence_address|default:"-----" }}</dd>
-                                </div>
-     
-                            </div>
+                        <!--Дата приема и увольнения-->
+                <div class="row">
+                    <div class="col-md-6">
+                        <div>
+                            <div class="text-muted">Дата приема: <b>{{ employee.hire_date|date:"d.m.Y" }}</b></div>
                         </div>
                     </div>
+                    <div class="col-md-6">
+                        <div>
+                            {% if employee.dismissal_date %}
+                            <div class="text-muted">Дата увольнения: <b>{{ employee.dismissal_date|date:"d.m.Y" }}</b></div>
+                            {% else %}
+                            <div class="text-muted">Стаж: <b>{{ employee.experience_display }}</b></div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card shadow-sm mt-3">
+                    <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center"
+                            style="cyrsor: pointer;"
+                            data-bs-toggle="collapse"
+                            data-bs-target="#regAddress"
+                            aria-expanded="true"
+                            aria-controls="regAddres">
+                        <h5 class="mb-0"><i class="bi bi-house"></i> Адреса</h5>
+                        <span class="badge bg-light text-dark">
+                            <i class="bi bi-chevron-down"></i>
+                        </span>
+                    </div>
+                    <div class="collapse" id="regAddress">
+                        <div class="card-body">
+
+                            <div class="col-12">
+                                <dt class="text-muted">Адрес регистрации</dt>
+                                <dd>{{ employee.registration_address|default:"-----" }}</dd>
+                            </div>
+                            <div class="col-12">
+                                <dt class="text-muted">Адрес проживания</dt>
+                                <dd>{{ employee.residence_address|default:"-----" }}</dd>
+                            </div>
+    
+                        </div>
+                    </div>
+                </div>
 
                 <div class="card shadow-sm mt-3">
                     <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center"
@@ -173,26 +209,10 @@
         </div>
     </div>
 
-    <div class="col-md-7">
+    <div class="col-md-7 mt-3" >
+
         <div class="card shadow-sm">
             <div class="card-body">
-
-                <!--Дата приема и увольнения-->
-                <div class="row">
-                    <div class="col-sm-6">
-                        <dl>
-                            <dt class="text-muted">Дата приема</dt>
-                            <dd>{{ employee.hire_date|date:"d.m.Y" }}</dd>
-                            
-                            {% if employee.dismissal_date %}
-                            <dt class="text-muted">Дата увольнения</dt>
-                            <dd>{{ employee.dismissal_date|date:"d.m.Y" }}</dd>
-                            {% endif %}
-                        </dl>
-                    </div>
-                </div>
-                
-                <hr>
 
                 <!-- Участки -->
                 <div class="card shadow-sm mt-3">

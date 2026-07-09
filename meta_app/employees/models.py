@@ -273,10 +273,43 @@ class Employee(AbstractUser):
 
         super().save(*args, **kwargs)
 
+
     @property
     def full_name(self):
         return f"{self.last_name} {self.first_name} {self.patronymic}".strip()
-
+    
+    
+    @property
+    def experience_years(self):
+        """Стаж в годах (полных лет)"""
+        if not self.hire_date:
+            return 0
+        today = timezone.now().date()
+        return today.year - self.hire_date.year - (
+            (today.month, today.day) < (self.hire_date.month, self.hire_date.day)
+        )
+        
+    @property
+    def experience_month(self):
+        """Стаж в месяцах"""
+        if not self.hire_date:
+            return 0
+        today = timezone.now().date()
+        return (today.year - self.hire_date.year) * 12 + today.month - self.hire_date.month
+    
+    
+    @property
+    def experience_display(self):
+        """Красивый вывод стажа"""
+        years = self.experience_years
+        months = self.experience_month % 12
+        parts = []
+        if years:
+            parts.append(f"{years} {'год' if years == 1 else 'года' if years < 5 else 'лет'}")
+        if months:
+            parts.append(f"{months} {'месяц' if months == 1 else 'месяца' if months < 5 else 'месяцев'}")
+        return " ".join(parts) or "Меньше месяца"
+        
 
 class Skill(models.Model):
     """Модель навыка/квалификации"""
