@@ -48,3 +48,13 @@ def split(value, arg):
     if not value:
         return []
     return [item.strip() for item in value.split(arg)]
+
+
+@register.filter
+def get_item(dictionary, key):
+    """Получить значение из словаря по ключу"""
+    if dictionary is None:
+        return None
+    if isinstance(dictionary, dict):
+        return dictionary.get(key)
+    return None

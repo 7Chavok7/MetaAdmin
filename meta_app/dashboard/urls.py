@@ -54,4 +54,9 @@ urlpatterns = [
     
      # Отчеты
      path('reports/hours/', attendance_views.report_employee_hours, name='report_hours'),
+    path('norms/', attendance_views.norm_list, name='norm_list'),
+    path('norms/edit/', attendance_views.norm_edit, name='norm_edit'),
+    path('norms/edit/<int:norm_id>/', attendance_views.norm_edit, name='norm_edit'),
+    path('norms/delete/<int:norm_id>/', attendance_views.norm_delete, name='norm_delete'),
+    path('norms/fill/', attendance_views.norm_fill, name='norm_fill'),
 ]

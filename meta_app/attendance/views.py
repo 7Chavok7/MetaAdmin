@@ -5,8 +5,8 @@ from django.utils import timezone
 from datetime import datetime, timedelta
 from meta_app.employees.models import Employee
 from meta_app.workstations.models import EmployeeWorkstation
-from .models import DailyAttendance
-from .forms import AttendanceForm
+from .models import DailyAttendance, MonthlyWorkNorm
+from .forms import AttendanceForm, MonthlyWorkNormForm
 
 
 def is_manager(user):
@@ -424,3 +424,124 @@ def report_employee_hours(request):
         'current_year': current_year,
         'current_month': current_month,
     })
+
+
+@login_required
+@user_passes_test(is_manager)
+def norm_list(request):
+    """Список норм часов"""
+    # Получаем все нормы
+    all_norms = MonthlyWorkNorm.objects.all().order_by('-year', 'month')
+
+    # Группируем по годам
+    years = list(MonthlyWorkNorm.objects.values_list(
+        'year', flat=True).distinct().order_by('-year'))
+    if not years:
+        years = [2026]
+
+    # Строим таблицу данных
+    months = [
+        {'id': 1, 'name': 'Январь'},
+        {'id': 2, 'name': 'Февраль'},
+        {'id': 3, 'name': 'Март'},
+        {'id': 4, 'name': 'Апрель'},
+        {'id': 5, 'name': 'Май'},
+        {'id': 6, 'name': 'Июнь'},
+        {'id': 7, 'name': 'Июль'},
+        {'id': 8, 'name': 'Август'},
+        {'id': 9, 'name': 'Сентябрь'},
+        {'id': 10, 'name': 'Октябрь'},
+        {'id': 11, 'name': 'Ноябрь'},
+        {'id': 12, 'name': 'Декабрь'},
+    ]
+
+    # Создаём данные для таблицы
+    table_data = []
+    for month in months:
+        row = {
+            'month': month['name'],
+            'month_id': month['id'],
+            'norms': {},
+        }
+        for year in years:
+            norm = MonthlyWorkNorm.objects.filter(
+                year=year, month=month['id']).first()
+            row['norms'][year] = norm
+        table_data.append(row)
+
+    return render(request, 'attendance/norm_list.html', {
+        'table_data': table_data,
+        'years': years,
+    })
+
+
+@login_required
+@user_passes_test(is_manager)
+def norm_edit(request, norm_id=None):
+    """Редактирование или создание нормы"""
+    if norm_id:
+        norm = get_object_or_404(MonthlyWorkNorm, id=norm_id)
+    else:
+        norm = None
+
+    if request.method == 'POST':
+        form = MonthlyWorkNormForm(request.POST, instance=norm)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Норма часов сохранена!')
+            return redirect('dashboard:norm_list')
+    else:
+        form = MonthlyWorkNormForm(instance=norm)
+
+    return render(request, 'attendance/norm_edit.html', {
+        'form': form,
+        'norm': norm,
+    })
+
+
+@login_required
+@user_passes_test(is_manager)
+def norm_delete(request, norm_id):
+    """Удаление нормы"""
+    norm = get_object_or_404(MonthlyWorkNorm, id=norm_id)
+    year = norm.year
+    month = norm.month
+    norm.delete()
+    messages.success(request, f'Норма за {month}.{year} удалена!')
+    return redirect('dashboard:norm_list')
+
+
+@login_required
+@user_passes_test(is_manager)
+def norm_fill(request):
+    """Быстрое заполнение норм для всех месяцев года"""
+    if request.method == 'POST':
+        year = request.POST.get('year')
+        hours = request.POST.get('hours')
+
+        if not year or not hours:
+            messages.error(request, 'Укажите год и норму часов')
+            return redirect('dashboard:norm_list')
+
+        try:
+            year = int(year)
+            hours = float(hours)
+        except ValueError:
+            messages.error(request, 'Некорректные данные')
+            return redirect('dashboard:norm_list')
+
+        created_count = 0
+        for month in range(1, 13):
+            obj, created = MonthlyWorkNorm.objects.get_or_create(
+                year=year,
+                month=month,
+                defaults={'hours_norm': hours}
+            )
+            if created:
+                created_count += 1
+
+        messages.success(
+            request, f'Создано {created_count} норм для {year} года')
+        return redirect('dashboard:norm_list')
+
+    return redirect('dashboard:norm_list')

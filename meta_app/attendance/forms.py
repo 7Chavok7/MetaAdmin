@@ -1,5 +1,5 @@
 from django import forms
-from .models import DailyAttendance
+from .models import DailyAttendance, MonthlyWorkNorm
 
 
 class AttendanceForm(forms.ModelForm):
@@ -42,4 +42,27 @@ class AttendanceForm(forms.ModelForm):
             'end_time': 'Время окончания',
             'overtime_hours': 'Переработка (часов)',
             'note': 'Примечание',
+        }
+
+
+class MonthlyWorkNormForm(forms.ModelForm):
+    """Форма для редактирования нормы часов"""
+
+    class Meta:
+        model = MonthlyWorkNorm
+        fields = ['year', 'month', 'hours_norm']
+        widgets = {
+            'year': forms.NumberInput(attrs={'class': 'form-control'}),
+            'month': forms.Select(attrs={'class': 'form-select'}, choices=[
+                (1, 'Январь'), (2, 'Февраль'), (3, 'Март'),
+                (4, 'Апрель'), (5, 'Май'), (6, 'Июнь'),
+                (7, 'Июль'), (8, 'Август'), (9, 'Сентябрь'),
+                (10, 'Октябрь'), (11, 'Ноябрь'), (12, 'Декабрь'),
+            ]),
+            'hours_norm': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1'}),
+        }
+        labels = {
+            'year': 'Год',
+            'month': 'Месяц',
+            'hours_norm': 'Норма часов',
         }

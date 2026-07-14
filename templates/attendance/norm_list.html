@@ -1,0 +1,95 @@
+<!-- tempaltes/attendance/norm_list.html -->
+{% extends 'base/base.html' %}
+{% load attendance_filters %}
+
+{% block title %}Нормы часов - MetaAdmin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-clock"></i> Нормы рабочего времени</h1>
+    <a href="{% url 'dashboard:norm_edit' %}" class="btn btn-success">
+        <i class="bi bi-plus"></i> Добавить норму
+    </a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-calendar3"></i> Нормы часов по месяцам</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>Месяц</th>
+                        {% for year in years %}
+                        <th class="text-center">{{ year }}</th>
+                        {% endfor %}
+                        <th class="text-center">Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in table_data %}
+                    <tr>
+                        <td><strong>{{ row.month }}</strong></td>
+                        {% for year in years %}
+                        <td class="text-center">
+                            {% with norm=row.norms|get_item:year %}
+                                {% if norm %}
+                                    <span class="badge bg-success">{{ norm.hours_norm|floatformat:1 }}</span>
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            {% endwith %}
+                        </td>
+                        {% endfor %}
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm">
+                                {% for year in years %}
+                                    {% with norm=row.norms|get_item:year %}
+                                        {% if norm %}
+                                            <a href="{% url 'dashboard:norm_edit' norm.id %}" class="btn btn-outline-primary">
+                                                <i class="bi bi-pencil"></i>
+                                            </a>
+                                            <a href="{% url 'dashboard:norm_delete' norm.id %}" 
+                                               class="btn btn-outline-danger"
+                                               onclick="return confirm('Удалить норму?')">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        {% endif %}
+                                    {% endwith %}
+                                {% endfor %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- Быстрое заполнение -->
+<div class="card shadow-sm mt-3">
+    <div class="card-header bg-secondary text-white">
+        <h5 class="mb-0"><i class="bi bi-lightning"></i> Быстрое заполнение</h5>
+    </div>
+    <div class="card-body">
+        <p class="text-muted">Заполните нормы для всех месяцев указанного года:</p>
+        <form method="post" action="{% url 'dashboard:norm_fill' %}" class="row g-3">
+            {% csrf_token %}
+            <div class="col-md-3">
+                <input type="number" name="year" class="form-control" value="2026" required>
+            </div>
+            <div class="col-md-3">
+                <input type="number" name="hours" class="form-control" step="0.1" placeholder="Норма часов" required>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-warning w-100">
+                    <i class="bi bi-fill"></i> Заполнить все месяцы
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

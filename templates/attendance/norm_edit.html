@@ -1,0 +1,63 @@
+<!-- templates/attendance/norm_edit-->
+{% extends 'base/base.html' %}
+
+{% block title %}{% if norm %}Редактирование{% else %}Добавление{% endif %} нормы - MetaAdmin{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'dashboard:norm_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Назад к списку
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">
+                    <i class="bi bi-pencil"></i>
+                    {% if norm %}Редактирование{% else %}Добавление{% endif %} нормы
+                </h5>
+            </div>
+            <div class="card-body">
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.year.id_for_label }}" class="form-label fw-bold">Год</label>
+                        {{ form.year }}
+                        {% if form.year.errors %}
+                        <div class="text-danger small">{{ form.year.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.month.id_for_label }}" class="form-label fw-bold">Месяц</label>
+                        {{ form.month }}
+                        {% if form.month.errors %}
+                        <div class="text-danger small">{{ form.month.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.hours_norm.id_for_label }}" class="form-label fw-bold">Норма часов</label>
+                        {{ form.hours_norm }}
+                        {% if form.hours_norm.errors %}
+                        <div class="text-danger small">{{ form.hours_norm.errors }}</div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'dashboard:norm_list' %}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Отмена
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Сохранить
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
