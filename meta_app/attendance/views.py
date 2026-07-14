@@ -266,55 +266,30 @@ def attendance_calendar(request, year=None, month=None):
         })
 
     # Получаем всех сотрудников
-        employees = Employee.objects.filter(
-            is_active=True,
-            is_superuser=False
-        ).order_by('last_name', 'first_name')
+    employees = Employee.objects.filter(
+        is_active=True,
+        is_superuser=False
+    ).order_by('last_name', 'first_name')
 
-        # Фильтруем сотрудников по активности в выбранном месяце
-        active_employees = []
-        for employee in employees:
-            # Если сотрудник не уволен — показываем
-            if not employee.dismissal_date:
+    # Фильтруем сотрудников по активности в выбранном месяце
+    active_employees = []
+    for employee in employees:
+        if not employee.dismissal_date:
+            active_employees.append(employee)
+        else:
+            dismissal = employee.dismissal_date
+            # Уволен в этом месяце или позже — показываем
+            if dismissal.year > year or (dismissal.year == year and dismissal.month >= month):
                 active_employees.append(employee)
-            else:
-                # Сотрудник уволен — показываем ТОЛЬКО в месяц увольнения
-                dismissal = employee.dismissal_date
-                if dismissal.year == year and dismissal.month == month:
-                    # Уволен в этом месяце — показываем
-                    active_employees.append(employee)
-                # Если уволен в будущем — показываем (не бывает, но на всякий случай)
-                elif dismissal.year > year or (dismissal.year == year and dismissal.month > month):
-                    active_employees.append(employee)
-                # Если уволен в прошлом — НЕ показываем
-                # (ничего не делаем, просто пропускаем)
 
-        employees = active_employees
-
-            # Группируем сотрудников по основному участку
-        grouped_employees = defaultdict(list)
-
-        for employee in active_employees:
-            primary_workstation = employee.workstation_assignments.filter(
-                is_primary=True).first()
-            if primary_workstation:
-                workstation_name = primary_workstation.workstation.name
-                workstation_id = primary_workstation.workstation.id
-            else:
-                workstation_name = "Без участка"
-                workstation_id = 0
-
-            grouped_employees[(workstation_id, workstation_name)].append(employee)
+    employees = active_employees
 
     # Группируем сотрудников по основному участку
     grouped_employees = defaultdict(list)
 
     for employee in employees:
-        # Находим основной участок сотрудника
         primary_workstation = employee.workstation_assignments.filter(
             is_primary=True).first()
-
-        # Если основного участка нет — определяем в группу "Без участка"
         if primary_workstation:
             workstation_name = primary_workstation.workstation.name
             workstation_id = primary_workstation.workstation.id
@@ -324,11 +299,11 @@ def attendance_calendar(request, year=None, month=None):
 
         grouped_employees[(workstation_id, workstation_name)].append(employee)
 
-    # Сортируем группы: сначала по имени участка (кроме "Без участка" в конце)
+    # Сортируем группы
     def sort_key(item):
         ws_id, ws_name = item[0]
         if ws_id == 0:
-            return (999, ws_name)  # "Без участка" в конце
+            return (999, ws_name)
         return (ws_id, ws_name)
 
     sorted_groups = sorted(grouped_employees.items(), key=sort_key)
@@ -336,11 +311,9 @@ def attendance_calendar(request, year=None, month=None):
     # Собираем данные для каждой группы
     group_data = []
     for (ws_id, ws_name), employees_in_group in sorted_groups:
-        # Сортируем сотрудников в группе по фамилии
         employees_in_group = sorted(
             employees_in_group, key=lambda e: e.last_name)
-        
-        # Получаем данные посещаемости для сотрудников группы
+
         month_attendances = {}
         month_totals = {}
         for employee in employees_in_group:
@@ -357,8 +330,7 @@ def attendance_calendar(request, year=None, month=None):
                     total_hours += att.actual_hours
             month_attendances[employee.id] = day_dict
             month_totals[employee.id] = total_hours
-            
-        # Добавляем информацию об увольнении для каждого сотрудника
+
         employee_data = []
         for employee in employees_in_group:
             employee_data.append({
@@ -384,7 +356,6 @@ def attendance_calendar(request, year=None, month=None):
         'today': today,
         'can_edit': request.user.is_superuser,
     })
-
 
 @login_required
 @user_passes_test(is_manager)
@@ -695,29 +666,4 @@ def norm_bulk_edit(request):
         'month_data': month_data,
         'months': ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
                    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'],
-    })
-
-
-@login_required
-@user_passes_test(is_manager)
-def employee_list(request):
-    """Список всех сотрудников (исключая суперпользователей и уволенных)"""
-    employees = Employee.objects.filter(
-        is_active=True,
-        is_superuser=False
-    ).order_by('last_name', 'first_name')
-
-    # Исключаем уволенных полностью
-    active_employees = []
-    for emp in employees:
-        if not emp.dismissal_date:
-            active_employees.append(emp)
-        # Если уволен, но дата увольнения ещё не наступила (будущее)
-        elif emp.dismissal_date > timezone.now().date():
-            active_employees.append(emp)
-        # Если уволен в прошлом или сегодня — исключаем
-
-    return render(request, 'dashboard/employee_list.html', {
-        'employees': active_employees,
-        'can_edit': request.user.is_superuser or request.user.is_manager,
     })
