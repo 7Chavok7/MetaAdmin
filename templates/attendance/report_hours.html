@@ -1,0 +1,176 @@
+# templates/attendance/report_hours.html | A.Grachev
+
+{% extends 'base/base.html' %}
+{% load attendance_filters %}
+
+{% block title %}Отчет по часам - MetaAdmin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-bar-chart"></i> Отчет по отработанным часам</h1>
+    <div>
+        <button onclick="window.print()" class="btn btn-outline-secondary">
+            <i class="bi bi-printer"></i> Печать
+        </button>
+    </div>
+</div>
+
+<!-- Фильтры -->
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Год</label>
+                <select name="year" class="form-select">
+                    {% for y in "2026,2027,2028"|split:"," %}
+                    <option value="{{ y }}" {% if year == y|add:0 %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <label class="form-label fw-bold">Месяц</label>
+                <select name="month" class="form-select">
+                    {% for m in "1,2,3,4,5,6,7,8,9,10,11,12"|split:"," %}
+                    <option value="{{ m }}" {% if month == m|add:0 %}selected{% endif %}>
+                        {{ m|add:0|get_month_name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Участок</label>
+                <select name="workstation" class="form-select">
+                    <option value="all" {% if not selected_workstation or selected_workstation == 'all' %}selected{% endif %}>
+                        Все участки
+                    </option>
+                    {% for ws in workstations %}
+                    <option value="{{ ws.id }}" {% if selected_workstation == ws.id|stringformat:"s" %}selected{% endif %}>
+                        {{ ws.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> Применить
+                </button>
+            </div>
+            <div class="col-md-1">
+                <a href="{% url 'dashboard:report_hours' %}" class="btn btn-outline-secondary w-100">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Результаты -->
+<div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+            <h5 class="mb-0">
+                <i class="bi bi-calendar3"></i> {{ month_name }} {{ year }}
+                <span class="badge bg-light text-dark ms-2">Норма: {{ hours_norm|floatformat:1 }} ч.</span>
+            </h5>
+            <div class="btn-group">
+                <!-- Кнопка "Назад" -->
+                <a href="?{% if selected_workstation and selected_workstation != 'all' %}workstation={{ selected_workstation }}&{% endif %}year={% if month == 1 %}{{ year|add:-1 }}{% else %}{{ year }}{% endif %}&month={% if month == 1 %}12{% else %}{{ month|add:-1 }}{% endif %}" 
+                class="btn btn-light btn-sm">
+                    <i class="bi bi-chevron-left"></i>
+                </a>
+                
+                <!-- Кнопка "Сегодня" -->
+                <a href="?{% if selected_workstation and selected_workstation != 'all' %}workstation={{ selected_workstation }}&{% endif %}year={{ current_year }}&month={{ current_month }}" 
+                class="btn btn-light btn-sm">
+                    <i class="bi bi-calendar-check"></i>
+                </a>
+                
+                <!-- Кнопка "Вперед" -->
+                <a href="?{% if selected_workstation and selected_workstation != 'all' %}workstation={{ selected_workstation }}&{% endif %}year={% if month == 12 %}{{ year|add:1 }}{% else %}{{ year }}{% endif %}&month={% if month == 12 %}1{% else %}{{ month|add:1 }}{% endif %}" 
+                class="btn btn-light btn-sm">
+                    <i class="bi bi-chevron-right"></i>
+                </a>
+            </div>
+        </div>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" style="font-size: 13px;">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th style="min-width: 150px;">Сотрудник</th>
+                        <th>Участок</th>
+                        <th class="text-center">Дней</th>
+                        <th class="text-center">Отработано</th>
+                        <th class="text-center">Норма</th>
+                        <th class="text-center">Переработка</th>
+                        <th class="text-center">Выходные</th>
+                        <th class="text-center">Среднее в день</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in report_data %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>
+                            <a href="{% url 'dashboard:employee_detail' item.employee.id %}" 
+                               style="color: #212529; text-decoration: none; font-weight: 500;">
+                                {{ item.employee.full_name }}
+                            </a>
+                        </td>
+                        <td>{{ item.workstation }}</td>
+                        <td class="text-center">{{ item.work_days }}</td>
+                        <td class="text-center">
+                            <strong>{{ item.total_hours|floatformat:1 }}</strong> ч.
+                        </td>
+                        <td class="text-center text-muted">{{ item.norm_hours|floatformat:1 }}</td>
+                        <td class="text-center">
+                            {% if item.overtime > 0 %}
+                            <span class="badge bg-warning text-dark">
+                                +{{ item.overtime|floatformat:1 }}
+                            </span>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            {% if item.weekend_works > 0 %}
+                            <span class="badge bg-info text-white">
+                                {{ item.weekend_works }}
+                            </span>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">{{ item.avg_hours|floatformat:1 }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="9" class="text-center py-4">
+                            <p class="text-muted">Нет данных за выбранный период</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot class="table-light fw-bold">
+                    <tr>
+                        <td colspan="4" class="text-end">Итого:</td>
+                        <td class="text-center">
+                            {{ report_data|sum_hours }} ч.
+                        </td>
+                        <td class="text-center">—</td>
+                        <td class="text-center">
+                            {{ report_data|sum_overtime }} ч.
+                        </td>
+                        <td class="text-center">
+                            {{ report_data|sum_weekend }} дн.
+                        </td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

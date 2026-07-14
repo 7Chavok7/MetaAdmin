@@ -149,3 +149,23 @@ class DailyAttendance(models.Model):
             self.actual_hours = 0
 
         super().save(*args, **kwargs)
+
+
+class MonthlyWorkNorm(models.Model):
+    """Нормы рабочего времени"""
+    year = models.IntegerField(verbose_name='Год')
+    month = models.IntegerField(verbose_name='Месяц')
+    hours_norm = models.DecimalField(
+        max_digits=5,
+        decimal_places=1,
+        verbose_name='Норма часов (40-чвсовая неделя)'
+    )
+    
+    class Meta:
+        verbose_name = 'Норма рабочего времени'
+        verbose_name_plural = 'Нормы рабочего времени'
+        unique_together = ['year', 'month']
+        ordering = ['-year', 'month']
+        
+    def __str__(self):
+        return f"{self.month}/{self.year}: {self.hours_norm}"

@@ -38,16 +38,29 @@
                         </a></li>
                     </ul>
                 </li>
-
+                
+                <!-- Сотрудники -->
                 <li class="nav-item">
                     <a class="nav-link" href="{% url 'dashboard:employee_list' %}">
                         <i class="bi bi-people"></i> Сотрудники
                     </a>
                 </li>
+
+                <!-- Отчеты -->
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'dashboard:report_hours' %}">
+                        <i class="bi bi-bar-chart"></i> Отчеты
+                    </a>
+                </li>
                 
                 </ul>    
-                <ul class="navbar-nav ms-auto">
+                <ul class="navbar-nav">
                     {% if user.is_authenticated %}
+                        <li class="nav-item">
+                            <dd class="navbar-text text-light me-3">
+                                <i class="bi bi-person-circle text-light"></i> {{ user.full_name }}
+                            </dd>
+                        </li>
                         {% if user.is_superuser %}
                         <li class="nav-item">
                             <a class="nav-link" href="/admin/">
@@ -55,11 +68,6 @@
                             </a>
                         </li>
                         {% endif %}
-                        <li class="nav-item">
-                            <span class="navbar-text text-light me-2">
-                                <i class="bi bi-person-circle"></i> {{ user.full_name }}
-                            </span>
-                        </li>
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'dashboard:logout' %}">
                                 <i class="bi bi-box-arrow-right"></i> Выйти

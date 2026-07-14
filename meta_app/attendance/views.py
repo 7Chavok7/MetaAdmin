@@ -320,3 +320,107 @@ def attendance_calendar(request, year=None, month=None):
         'today': today,
         'can_edit': request.user.is_superuser,
     })
+
+
+@login_required
+@user_passes_test(is_manager)
+def report_employee_hours(request):
+    """Отчет по отработанным часам сотрудников"""
+    from django.db.models import Sum, Count, Q
+    from datetime import datetime
+    from meta_app.workstations.models import Workstation
+    from .models import MonthlyWorkNorm
+
+    today = timezone.now().date()
+    
+    current_year = today.year
+    current_month = today.month
+
+    # Параметры фильтрации
+    year = int(request.GET.get('year', today.year))
+    month = int(request.GET.get('month', today.month))
+    workstation_id = request.GET.get('workstation')
+
+    # Список участков для фильтра
+    workstations = Workstation.objects.filter(is_active=True).order_by('name')
+
+    # Получаем сотрудников
+    employees = Employee.objects.filter(
+        is_active=True,
+        is_superuser=False
+    ).order_by('last_name', 'first_name')
+
+    # Фильтр по участку
+    if workstation_id and workstation_id != 'all':
+        try:
+            ws = Workstation.objects.get(id=workstation_id)
+            employees = employees.filter(
+                workstation_assignments__workstation=ws
+            ).distinct()
+        except Workstation.DoesNotExist:
+            pass
+
+    # Получаем норму часов за месяц
+    try:
+        norm = MonthlyWorkNorm.objects.get(year=year, month=month)
+        hours_norm = norm.hours_norm
+    except MonthlyWorkNorm.DoesNotExist:
+        hours_norm = 0
+
+    # Собираем данные по каждому сотруднику
+    report_data = []
+    for employee in employees:
+        # Записи за выбранный месяц
+        attendances = employee.attendances.filter(
+            record_date__year=year,
+            record_date__month=month,
+            is_present=True
+        )
+
+        # Всего отработанных часов
+        total_hours = sum([att.actual_hours for att in attendances])
+
+        # Количество рабочих дней
+        work_days = attendances.count()
+
+        # Переработка (часы сверх нормы)
+        overtime = max(0, total_hours - hours_norm)
+
+        # Выходы в выходные дни
+        weekend_works = attendances.filter(is_weekend_shift=True).count()
+
+        # Получаем основной участок
+        primary_workstation = employee.workstation_assignments.filter(
+            is_primary=True).first()
+        workstation_name = primary_workstation.workstation.name if primary_workstation else '—'
+
+        # Среднее часов в день
+        avg_hours = total_hours / work_days if work_days > 0 else 0
+
+        report_data.append({
+            'employee': employee,
+            'workstation': workstation_name,
+            'work_days': work_days,
+            'total_hours': total_hours,
+            'norm_hours': hours_norm,
+            'overtime': overtime,
+            'weekend_works': weekend_works,
+            'avg_hours': avg_hours,
+            'attendances': attendances,
+        })
+
+    # Сортируем: сначала переработка (убывание)
+    report_data.sort(key=lambda x: x['overtime'], reverse=True)
+
+    return render(request, 'attendance/report_hours.html', {
+        'report_data': report_data,
+        'year': year,
+        'month': month,
+        'month_name': ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                       'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'][month - 1],
+        'workstations': workstations,
+        'selected_workstation': workstation_id,
+        'hours_norm': hours_norm,
+        'current_year': current_year,
+        'current_month': current_month,
+    })
