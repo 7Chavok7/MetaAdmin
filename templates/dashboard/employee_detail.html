@@ -35,40 +35,46 @@
     <div class="col-md-5">
         <div class="card shadow-sm mt-3">
             <div class="card-body text-center">
-                {% if employee.photo %}
-                <img src="{{ employee.photo.url }}" alt="{{ employee.full_name }}" 
-                     class="rounded-circle mb-3" width="150" height="150" style="object-fit: cover;">
-                {% else %}
-                <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center mx-auto mb-3" 
-                     style="width: 150px; height: 150px; font-size: 48px;">
-                    {{ employee.last_name|slice:":1" }}
-                </div>
-                {% endif %}
-                <!--Дата рождения в карточке-->
-                <h3>{{ employee.full_name }}</h3>
-                <p class="text-muted">
-                    <i class="bi bi-cake"></i><!-- Дата рождения: --> {{ employee.birth_date|date:"d.m.Y" }}
-                </p>
+                <div class="row">
+                    <div class="col-md-5">
+                        {% if employee.photo %}
+                        <img src="{{ employee.photo.url }}" alt="{{ employee.full_name }}" 
+                            class="rounded-circle mb-3" width="150" height="150" style="object-fit: cover;">
+                        {% else %}
+                        <div class="rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center mx-auto mb-3" 
+                            style="width: 150px; height: 150px; font-size: 48px;">
+                            {{ employee.last_name|slice:":1" }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="col-md-7">
+                        <!--Дата рождения в карточке-->
+                        <h3>{{ employee.full_name }}</h3>
+                        <p class="text-muted">
+                            <i class="bi bi-cake"></i><!-- Дата рождения: --> {{ employee.birth_date|date:"d.m.Y" }}
+                        </p>
 
-                <!--Номер телефона в карточке-->
-                <p class="text-muted">
-                    <i class="bi bi-telephone"></i> {{ employee.phone_number }}
-                </p>
+                        <!--Номер телефона в карточке-->
+                        <p class="text-muted">
+                            <i class="bi bi-telephone"></i> {{ employee.phone_number }}
+                        </p>
 
-                <div class="d-flex justify-content-center gap-2 flex-wrap">
-                    <span class="badge bg-primary">Таб. №{{ employee.employee_id }}</span>
-                    {% if employee.card_number %}
-                    <span class="badge bg-secondary">Карта №{{ employee.card_number }}</span>
-                    {% endif %}
-                    {% if employee.is_active %}
-                    <span class="badge bg-success">
-                        <i class="bi bi-check-circle"></i> Работает
-                    </span>
-                    {% else %}
-                    <span class="badge bg-danger">
-                        <i class="bi bi-x-circle"></i> Уволен
-                    </span>
-                    {% endif %}
+                        <div class="d-flex justify-content-center gap-2 flex-wrap">
+                            <span class="badge bg-primary">Таб. №{{ employee.employee_id }}</span>
+                            {% if employee.card_number %}
+                            <span class="badge bg-secondary">Карта №{{ employee.card_number }}</span>
+                            {% endif %}
+                            {% if employee.is_active %}
+                            <span class="badge bg-success">
+                                <i class="bi bi-check-circle"></i> Работает
+                            </span>
+                            {% else %}
+                            <span class="badge bg-danger">
+                                <i class="bi bi-x-circle"></i> Уволен
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
                 </div>     
                 <hr>       
                 {% comment %} <div class="card-header">
@@ -414,37 +420,39 @@
                         {% endif %}
                     </div>
                 </div>
-            </div>
-        </div>
+
+
 
                 <!-- Аудит -->
-        <div class="card shadow-sm mt-3">
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-12"><div class="card-header bg-secondary text-white">
-                        <h5 class="mb-0"><i class="bi bi-clock"></i> История изменений</h5>
-                    </div>
-                        <dl>
-                            <dt class="text-muted">Создал</dt>
-                            <dd>
-                                {% if employee.created_by %}
-                                {{ employee.created_by.full_name }}
-                                {% else %}
-                                Система
-                                {% endif %}
-                                <small class="text-muted">({{ employee.created_at|date:"d.m.y H:i" }})</small>
-                            </dd>
-                            
-                            <dt class="text-muted">Последнее изменение</dt>
-                            <dd>
-                                {% if employee.updated_by %}
-                                {{ employee.updated_by.full_name }}
-                                {% else %}
-                                Не редактировался
-                                {% endif %}
-                                <small class="text-muted">({{ employee.updated_at|date:"d.m.y H:i" }})</small>
-                            </dd>
-                        </dl>
+                <div class="card shadow-sm mt-3">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-12"><div class="card-header bg-secondary text-white">
+                                <h5 class="mb-0"><i class="bi bi-clock"></i> История изменений</h5>
+                            </div>
+                                <dl>
+                                    <dt class="text-muted">Создал</dt>
+                                    <dd>
+                                        {% if employee.created_by %}
+                                        {{ employee.created_by.full_name }}
+                                        {% else %}
+                                        Система
+                                        {% endif %}
+                                        <small class="text-muted">({{ employee.created_at|date:"d.m.y H:i" }})</small>
+                                    </dd>
+                                    
+                                    <dt class="text-muted">Последнее изменение</dt>
+                                    <dd>
+                                        {% if employee.updated_by %}
+                                        {{ employee.updated_by.full_name }}
+                                        {% else %}
+                                        Не редактировался
+                                        {% endif %}
+                                        <small class="text-muted">({{ employee.updated_at|date:"d.m.y H:i" }})</small>
+                                    </dd>
+                                </dl>
+                            </div>
+                        </div>    
                     </div>
                 </div>
             </div>

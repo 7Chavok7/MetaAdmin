@@ -69,7 +69,7 @@
                         {% for employee_data in group.employees %}
                             {% with employee=employee_data.employee %}
                             <tr>
-                                <td style="position: sticky; left: 0; background: white; z-index: 1; font-weight: 500; font-size: 11px; padding: 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;">
+                                <td style="position: sticky; left: 0; background: white; z-index: 1; font-weight: 500; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;">
                                     <a href="{% url 'dashboard:employee_detail' employee.id %}" 
                                     style="color: #212529; text-decoration: none; cursor: pointer;"
                                     title="Перейти в карточку {{ employee.full_name }}">

@@ -76,7 +76,7 @@
                         <td>{{ attendance.record_date|date:"d.m.Y" }}</td>
                         <td>
                             <strong>{{ attendance.employee.full_name }}</strong>
-                            <br><small class="text-muted">Таб. №{{ attendance.employee.username }}</small>
+                            <br><small class="text-muted">Таб. №{{ attendance.employee.employee_id}}</small>
                         </td>
                         <td>{{ attendance.workstation.name|default:"—" }}</td>
                         <td>

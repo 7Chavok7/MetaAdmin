@@ -40,10 +40,20 @@
                 </li>
 
                 <!-- Сотрудники -->
-                <li class="nav-item">
-                    <a class="nav-link" href="{% url 'dashboard:employee_list' %}">
-                        <i class="bi bi-people"></i> Сотрудники
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle" href="#" id="reportsDropdown" role="button" data-bs-toggle="dropdown">
+                        <i class="bi bi-people-fill"></i> Сотрудники
                     </a>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="{% url 'dashboard:employee_list' %}">
+                            <i class="bi bi-person"></i> Список сотрудников
+                            </a>
+                        </li>
+                        <li><a class="dropdown-item" href="{% url 'dashboard:employee_create' %}">
+                            <i class="bi bi-person-add"></i> Добавить сотрудника
+                            </a>
+                        </li>
+                    </ul>
                 </li>
 
                 <!-- Отчеты -->

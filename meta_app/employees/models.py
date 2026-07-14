@@ -29,7 +29,7 @@ class EmployeeManager(BaseUserManager):
             first_name=first_name,
             birth_date=birth_date,
             hire_date=hire_date,
-            **extra_fields
+            **extra_fields 
         )
         user.set_password(password)
         user.save(using=self._db)
