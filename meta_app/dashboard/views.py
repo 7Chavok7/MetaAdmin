@@ -69,6 +69,13 @@ def employee_detail(request, employee_id):
     """Карточка сотрудника"""
     employee = get_object_or_404(Employee, id=employee_id)
 
+    # Если сотрудник уволен и это не суперпользователь — запрещаем просмотр
+    if employee.dismissal_date and employee.dismissal_date < timezone.now().date():
+        if not request.user.is_superuser:
+            messages.error(
+                request, 'Карточка уволенного сотрудника недоступна')
+            return redirect('dashboard:employee_list')
+
     # Обычный сотрудник видит только себя
     if not (request.user.is_superuser or request.user.is_manager):
         if request.user.id != employee.id:

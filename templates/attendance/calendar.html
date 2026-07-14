@@ -66,74 +66,89 @@
                         </tr>
                         
                         <!-- Строки сотрудников группы -->
-                        {% for employee in group.employees %}
-                        <tr>
-                            <td style="position: sticky; left: 0; background: white; z-index: 1; font-weight: 500; font-size: 14px; padding-left: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;">
-                                <a href="{% url 'dashboard:employee_detail' employee.id %}" 
-                                   style="color: #212529; text-decoration: none; cursor: pointer;"
-                                   title="Перейти в карточку {{ employee.full_name }}">
-                                    {{ employee.last_name }} {{ employee.first_name|slice:":1" }}.{% if employee.patronymic %}{{ employee.patronymic|slice:":1" }}.{% endif %}
-                                </a>
-                            </td>
-                            <td class="text-center" style="font-size: 9px; padding: 2px;">{{ employee.employee_id|slice:"3:" }}</td>
-                            
-                            {% for day in days_in_month %}
-                                {% with day_attendance=group.month_attendances|get_item:employee.id %}
-                                    {% if day_attendance and day_attendance|get_item:day.day %}
-                                        {% with att=day_attendance|get_item:day.day %}
-                                            <td class="text-center" style="cursor: pointer; 
-                                                {% if day.is_weekend and att.status == 'weekend' %}background: #fce4e4; border: 1px solid #f5c6cb;{% endif %}
-                                                {% if att.status == 'present' %}background: #d4edda;
-                                                {% elif att.status == 'absent' %}background: #f8d7da;
-                                                {% elif att.status == 'weekend' %}background: #fff3cd;
-                                                {% elif att.status == 'sick' %}background: #d1ecf1;
-                                                {% elif att.status == 'vacation' %}background: #e2e3e5;
-                                                {% endif %}
-                                                padding: 1px; min-width: 28px; max-width: 28px; height: 28px;"
-                                                onclick="window.location.href='{% url 'dashboard:attendance_edit' att.id %}?next={{ request.get_full_path }}'"
-                                                title="{{ employee.full_name }}: {{ att.get_status_display }}, {{ att.actual_hours|floatformat:1 }} ч.">
-                                                <span style="font-size: 10px;">
-                                                    {% if att.status == 'present' %}✓
-                                                    {% elif att.status == 'absent' %}✗
-                                                    {% elif att.status == 'weekend' %}В
-                                                    {% elif att.status == 'sick' %}Б
-                                                    {% elif att.status == 'vacation' %}О
-                                                    {% endif %}
-                                                </span>
-                                                <br><small style="font-size: 8px;">{{ att.actual_hours|floatformat:1 }}</small>
-                                            </td>
-                                        {% endwith %}
-                                    {% else %}
-                                        {% if day.is_weekend %}
-                                            <td class="text-center" style="
-                                                background: #fce4e4; 
-                                                border: 1px solid #f5c6cb;
-                                                font-size: 10px;
-                                                cursor: pointer;
-                                                padding: 1px; min-width: 28px; max-width: 28px; height: 28px;"
-                                                onclick="window.location.href='{% url 'dashboard:attendance_create' employee.id %}?date={{ year }}-{{ month|stringformat:"02d" }}-{{ day.day|stringformat:"02d" }}&next={{ request.get_full_path }}'"
-                                                title="Создать запись для {{ employee.full_name }} - Выходной">
-                                                <span style="color: #721c24;">В</span>
-                                                <br><small style="color: #721c24; font-size: 6px;">0.0</small>
-                                            </td>
-                                        {% else %}
-                                            <td class="text-center" style="font-size: 9px; padding: 1px; min-width: 28px; max-width: 28px; height: 28px;">
-                                                <a href="{% url 'dashboard:attendance_create' employee.id %}?date={{ year }}-{{ month|stringformat:"02d" }}-{{ day.day|stringformat:"02d" }}&next={{ request.get_full_path }}" 
-                                                   class="text-decoration-none" style="color: #6c757d; font-size: 12px;">
-                                                    <i class="bi bi-plus-circle"></i>
-                                                </a>
-                                            </td>
-                                        {% endif %}
+                        {% for employee_data in group.employees %}
+                            {% with employee=employee_data.employee %}
+                            <tr>
+                                <td style="position: sticky; left: 0; background: white; z-index: 1; font-weight: 500; font-size: 11px; padding: 2px 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 120px;">
+                                    <a href="{% url 'dashboard:employee_detail' employee.id %}" 
+                                    style="color: #212529; text-decoration: none; cursor: pointer;"
+                                    title="Перейти в карточку {{ employee.full_name }}">
+                                        {{ employee.last_name }} {{ employee.first_name|slice:":1" }}.{% if employee.patronymic %}{{ employee.patronymic|slice:":1" }}.{% endif %}
+                                    </a>
+                                    {% if employee_data.dismissal_date %}
+                                        <span class="badge bg-danger ms-1" style="font-size: 8px;">Уволен</span>
                                     {% endif %}
-                                {% endwith %}
-                            {% endfor %}
-                            
-                            <td class="text-center fw-bold" style="position: sticky; right: 0; background: white; z-index: 1; font-size: 14px; padding: 2px; min-width: 45px; max-width: 45px;">
-                                {% with total=group.month_totals|get_item:employee.id %}
-                                    {{ total|floatformat:1 }}
-                                {% endwith %}
-                            </td>
-                        </tr>
+                                </td>
+                                <td class="text-center" style="font-size: 9px; padding: 2px;">{{ employee.employee_id }}</td>
+                                
+                                {% for day in days_in_month %}
+                                    {% with day_attendance=group.month_attendances|get_item:employee.id %}
+                                        {% if employee_data.dismissal_date and day.date > employee_data.dismissal_date %}
+                                            <!-- Заблокированная ячейка (после увольнения) -->
+                                            <td class="text-center" style="background: #f8f9fa; color: #ccc; cursor: not-allowed; 
+                                                        padding: 1px; min-width: 28px; max-width: 28px; height: 28px;"
+                                                title="Сотрудник уволен {{ employee_data.dismissal_date|date:'d.m.Y' }}">
+                                                <span style="font-size: 9px; color: #e74c3c;">✕</span>
+                                                <br><small style="font-size: 6px; color: #ccc;">уволен</small>
+                                            </td>
+                                        {% elif day_attendance and day_attendance|get_item:day.day %}
+                                            <!-- Существующая запись -->
+                                            {% with att=day_attendance|get_item:day.day %}
+                                                <td class="text-center" style="cursor: pointer; 
+                                                    {% if day.is_weekend and att.status == 'weekend' %}background: #fce4e4; border: 1px solid #f5c6cb;{% endif %}
+                                                    {% if att.status == 'present' %}background: #d4edda;
+                                                    {% elif att.status == 'absent' %}background: #f8d7da;
+                                                    {% elif att.status == 'weekend' %}background: #fff3cd;
+                                                    {% elif att.status == 'sick' %}background: #d1ecf1;
+                                                    {% elif att.status == 'vacation' %}background: #e2e3e5;
+                                                    {% endif %}
+                                                    padding: 1px; min-width: 28px; max-width: 28px; height: 28px;"
+                                                    onclick="window.location.href='{% url 'dashboard:attendance_edit' att.id %}?next={{ request.get_full_path }}'"
+                                                    title="{{ employee.full_name }}: {{ att.get_status_display }}, {{ att.actual_hours|floatformat:1 }} ч.">
+                                                    <span style="font-size: 9px;">
+                                                        {% if att.status == 'present' %}✓
+                                                        {% elif att.status == 'absent' %}✗
+                                                        {% elif att.status == 'weekend' %}В
+                                                        {% elif att.status == 'sick' %}Б
+                                                        {% elif att.status == 'vacation' %}О
+                                                        {% endif %}
+                                                    </span>
+                                                    <br><small style="font-size: 6px;">{{ att.actual_hours|floatformat:1 }}</small>
+                                                </td>
+                                            {% endwith %}
+                                        {% else %}
+                                            <!-- Нет записи -->
+                                            {% if day.is_weekend %}
+                                                <td class="text-center" style="
+                                                    background: #fce4e4; 
+                                                    border: 1px solid #f5c6cb;
+                                                    font-size: 9px;
+                                                    cursor: pointer;
+                                                    padding: 1px; min-width: 28px; max-width: 28px; height: 28px;"
+                                                    onclick="window.location.href='{% url 'dashboard:attendance_create' employee.id %}?date={{ year }}-{{ month|stringformat:"02d" }}-{{ day.day|stringformat:"02d" }}&next={{ request.get_full_path }}'"
+                                                    title="Создать запись для {{ employee.full_name }} - Выходной">
+                                                    <span style="color: #721c24;">В</span>
+                                                    <br><small style="color: #721c24; font-size: 6px;">0.0</small>
+                                                </td>
+                                            {% else %}
+                                                <td class="text-center" style="font-size: 9px; padding: 1px; min-width: 28px; max-width: 28px; height: 28px;">
+                                                    <a href="{% url 'dashboard:attendance_create' employee.id %}?date={{ year }}-{{ month|stringformat:"02d" }}-{{ day.day|stringformat:"02d" }}&next={{ request.get_full_path }}" 
+                                                    class="text-decoration-none" style="color: #6c757d; font-size: 12px;">
+                                                        <i class="bi bi-plus-circle"></i>
+                                                    </a>
+                                                </td>
+                                            {% endif %}
+                                        {% endif %}
+                                    {% endwith %}
+                                {% endfor %}
+                                
+                                <td class="text-center fw-bold" style="position: sticky; right: 0; background: white; z-index: 1; font-size: 11px; padding: 2px; min-width: 45px; max-width: 45px;">
+                                    {% with total=group.month_totals|get_item:employee.id %}
+                                        {{ total|floatformat:1 }}
+                                    {% endwith %}
+                                </td>
+                            </tr>
+                            {% endwith %}
                         {% endfor %}
                     {% empty %}
                         <tr>

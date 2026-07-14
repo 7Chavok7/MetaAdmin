@@ -272,6 +272,51 @@ class Employee(AbstractUser):
             self.updated_by = self._updated_by_user
 
         super().save(*args, **kwargs)
+        
+    def is_active_in_month(self, year, month):
+        """Проверяет, был ли сотрудник активен в указанном месяце"""
+        if not self.is_active or self.dismissal_date is None:
+            return True
+
+        # Если дата увольнения есть
+        dismissal = self.dismissal_date
+
+        # Если уволен до начала месяца — неактивен
+        if dismissal.year < year or (dismissal.year == year and dismissal.month < month):
+            return False
+
+        return True
+    
+    def has_work_in_month(self, year, month):
+        """Проверяет, есть ли хотя бы один рабочий день в месяце"""
+        from meta_app.attendance.models import DailyAttendance
+        
+        # Если сотрудник уволен до месяца — нет записей
+        if self.dismissal_date:
+            dismissal = self.dismissal_date
+            if dismissal.year < year or (dismissal.year == year and dismissal.month < month):
+                return False
+        
+        # Проверяем наличие записей в этом месяце
+        has_work = DailyAttendance.objects.filter(
+            employee=self,
+            record_date__year=year,
+            record_date__month=month,
+            is_present=True
+        ).exists()
+        
+        return has_work
+    
+    def can_edit_date(self, record_date):
+        """Проверяет, можно ли редактировать запись за указанную дату"""
+        if not self.dismissal_date:
+            return True
+        
+        # Если дата записи после увольнения — запрещено
+        if record_date > self.dismissal_date:
+            return False
+        
+        return True
 
 
     @property
@@ -387,3 +432,4 @@ class EmployeeSkill(models.Model):
 
     def __str__(self):
         return f"{self.employee.full_name} - {self.skill.name} ({self.get_level_display()})"
+
