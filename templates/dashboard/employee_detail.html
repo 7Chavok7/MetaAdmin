@@ -320,7 +320,7 @@
                             <a href="?month={{ prev_month }}&year={{ prev_year }}" class="btn btn-light btn-sm">
                                 <i class="bi bi-chevron-left"></i>
                             </a>
-                            <a href="?{% if month == current_month and year == current_year %}{% else %}month={{ current_month }}&year={{ current_year }}{% endif %}" class="btn btn-light btn-sm">
+                            <a href="?month={{ current_month }}&year={{ current_year }}" class="btn btn-light btn-sm">
                                 <i class="bi bi-calendar-check"></i>
                             </a>
                             <a href="?month={{ next_month }}&year={{ next_year }}" class="btn btn-light btn-sm">
@@ -328,28 +328,48 @@
                             </a>
                         </div>
                     </div>
-                    <div class="card-body">
+                     <div class="card-body">
                         <div class="row text-center">
-                            <div class="col-3">
-                                <h4>{{ stats.total_hours|floatformat:1 }}</h4>
-                                <small class="text-muted">Всего часов</small>
+                            <div class="col">
+                                <h4>
+                                    {{ stats.total_hours|floatformat:1 }}
+                                    {% if stats.hours_norm > 0 %}
+                                    <small style="font-size: 14px; color: #6c757d;">
+                                        ({{ stats.hours_norm|floatformat:1 }})
+                                    </small>
+                                    {% endif %}
+                                </h4>
+                                <small class="text-muted">Отработано часов (норма)</small>
                             </div>
-                            <div class="col-3">
+                            <div class="col">
                                 <h4>{{ stats.work_days }}</h4>
                                 <small class="text-muted">Рабочих дней</small>
                             </div>
-                            <div class="col-3">
+                            <div class="col">
                                 <h4>{{ stats.avg_hours|floatformat:1 }}</h4>
                                 <small class="text-muted">Среднее в день</small>
                             </div>
-                            <div class="col-3">
+                            <div class="col">
                                 <h4 class="text-warning">+{{ stats.total_overtime|floatformat:1 }}</h4>
                                 <small class="text-muted">Переработка</small>
+                            </div>
+                            <div class="col">
+                                <h4>
+                                    {% if stats.weekend_days > 0 %}
+                                    <span class="badge bg-warning text-dark" style="font-size: 24px;">
+                                        {{ stats.weekend_days }}
+                                    </span>
+                                    {% else %}
+                                    <span class="text-muted">—</span>
+                                    {% endif %}
+                                </h4>
+                                <small class="text-muted">Выходы в выходные</small>
+                            </div>
                             </div>
                         </div>
                     </div>
                 </div>
-
+                </div>
 
                 <!-- Последние записи -->
                 <div class="card shadow-sm mt-3">

@@ -332,9 +332,6 @@ def report_employee_hours(request):
     from .models import MonthlyWorkNorm
 
     today = timezone.now().date()
-    
-    current_year = today.year
-    current_month = today.month
 
     # Параметры фильтрации
     year = int(request.GET.get('year', today.year))
@@ -350,12 +347,14 @@ def report_employee_hours(request):
         is_superuser=False
     ).order_by('last_name', 'first_name')
 
-    # Фильтр по участку
+    # Фильтр по основному участку
     if workstation_id and workstation_id != 'all':
         try:
             ws = Workstation.objects.get(id=workstation_id)
+            # Фильтруем сотрудников, у которых ЭТОТ участок является ОСНОВНЫМ
             employees = employees.filter(
-                workstation_assignments__workstation=ws
+                workstation_assignments__workstation=ws,
+                workstation_assignments__is_primary=True
             ).distinct()
         except Workstation.DoesNotExist:
             pass
@@ -389,7 +388,7 @@ def report_employee_hours(request):
         # Выходы в выходные дни
         weekend_works = attendances.filter(is_weekend_shift=True).count()
 
-        # Получаем основной участок
+        # Получаем ОСНОВНОЙ участок
         primary_workstation = employee.workstation_assignments.filter(
             is_primary=True).first()
         workstation_name = primary_workstation.workstation.name if primary_workstation else '—'
@@ -421,10 +420,9 @@ def report_employee_hours(request):
         'workstations': workstations,
         'selected_workstation': workstation_id,
         'hours_norm': hours_norm,
-        'current_year': current_year,
-        'current_month': current_month,
+        'current_year': today.year,
+        'current_month': today.month,
     })
-
 
 @login_required
 @user_passes_test(is_manager)
@@ -545,3 +543,76 @@ def norm_fill(request):
         return redirect('dashboard:norm_list')
 
     return redirect('dashboard:norm_list')
+
+
+@login_required
+@user_passes_test(is_manager)
+def norm_bulk_edit(request):
+    """Массовое редактирование норм часов за год"""
+    from .forms import MonthlyWorkNormBulkForm
+
+    # Определяем год по умолчанию
+    default_year = 2026
+
+    # Если есть GET параметр year — используем его
+    if request.GET.get('year'):
+        default_year = int(request.GET.get('year'))
+    elif MonthlyWorkNorm.objects.exists():
+        default_year = MonthlyWorkNorm.objects.order_by('-year').first().year
+
+    if request.method == 'POST':
+        # Получаем год из POST
+        year = int(request.POST.get('year', default_year))
+
+        # Создаём форму с переданными данными
+        form = MonthlyWorkNormBulkForm(request.POST, year=year)
+
+        if form.is_valid():
+            created_count = 0
+            updated_count = 0
+
+            # Сохраняем каждый месяц
+            for month in range(1, 13):
+                field_name = f'month_{month}'
+                hours = form.cleaned_data.get(field_name)
+
+                if hours is not None and hours != '':
+                    norm, created = MonthlyWorkNorm.objects.update_or_create(
+                        year=year,
+                        month=month,
+                        defaults={'hours_norm': hours}
+                    )
+                    if created:
+                        created_count += 1
+                    else:
+                        updated_count += 1
+
+            messages.success(
+                request,
+                f'Нормы для {year} года сохранены! '
+                f'Создано: {created_count}, обновлено: {updated_count}'
+            )
+            return redirect(f'{request.path}?year={year}')
+    else:
+        # GET запрос — показываем форму с выбранным годом
+        form = MonthlyWorkNormBulkForm(year=default_year)
+
+    # Получаем данные для отображения текущего года
+    month_data = []
+    for month in range(1, 13):
+        norm = MonthlyWorkNorm.objects.filter(
+            year=default_year, month=month).first()
+        month_data.append({
+            'month': month,
+            'name': ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                     'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'][month - 1],
+            'hours': norm.hours_norm if norm else None,
+        })
+
+    return render(request, 'attendance/norm_bulk_edit.html', {
+        'form': form,
+        'year': default_year,
+        'month_data': month_data,
+        'months': ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                   'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'],
+    })

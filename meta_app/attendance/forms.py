@@ -1,3 +1,4 @@
+# meta_app/attendace/forms.py | A.Grrachev
 from django import forms
 from .models import DailyAttendance, MonthlyWorkNorm
 
@@ -43,6 +44,55 @@ class AttendanceForm(forms.ModelForm):
             'overtime_hours': 'Переработка (часов)',
             'note': 'Примечание',
         }
+
+
+class MonthlyWorkNormBulkForm(forms.Form):
+    """Форма для массового редактирования норм часов"""
+    year = forms.IntegerField(
+        label='Год',
+        widget=forms.NumberInput(attrs={'class': 'form-control'})
+    )
+
+    def __init__(self, *args, **kwargs):
+        # Получаем год из kwargs
+        year = kwargs.pop('year', None)
+        super().__init__(*args, **kwargs)
+
+        # Устанавливаем начальное значение для года
+        if year:
+            self.initial['year'] = year
+
+        months = [
+            ('Январь', 1), ('Февраль', 2), ('Март', 3),
+            ('Апрель', 4), ('Май', 5), ('Июнь', 6),
+            ('Июль', 7), ('Август', 8), ('Сентябрь', 9),
+            ('Октябрь', 10), ('Ноябрь', 11), ('Декабрь', 12),
+        ]
+
+        for month_name, month_num in months:
+            field_name = f'month_{month_num}'
+            self.fields[field_name] = forms.DecimalField(
+                label=month_name,
+                required=False,
+                min_value=0,
+                max_value=999,
+                decimal_places=1,
+                widget=forms.NumberInput(attrs={
+                    'class': 'form-control',
+                    'step': '0.1',
+                    'placeholder': '—',
+                    'style': 'width: 100px;'
+                })
+            )
+            if year:
+                try:
+                    norm = MonthlyWorkNorm.objects.get(
+                        year=year, month=month_num)
+                    self.fields[field_name].initial = norm.hours_norm
+                except MonthlyWorkNorm.DoesNotExist:
+                    pass
+
+        self.year = year
 
 
 class MonthlyWorkNormForm(forms.ModelForm):

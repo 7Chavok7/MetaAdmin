@@ -58,3 +58,11 @@ def get_item(dictionary, key):
     if isinstance(dictionary, dict):
         return dictionary.get(key)
     return None
+
+@register.filter
+def add(value, arg):
+    """Сложение"""
+    try:
+        return int(value) + int(arg)
+    except (ValueError, TypeError):
+        return value

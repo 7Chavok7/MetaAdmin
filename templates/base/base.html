@@ -53,11 +53,14 @@
                     </a>
                     <ul class="dropdown-menu">
                         <li><a class="dropdown-item" href="{% url 'dashboard:report_hours' %}">
-                            <i class="bi bi-clock"></i> Отработанные часы
-                        </a></li>
-                        <li><a class="dropdown-item" href="{% url 'dashboard:norm_list' %}">
-                            <i class="bi bi-calendar"></i> Нормы часов
-                        </a></li>
+                                <i class="bi bi-clock"></i> Отработанные часы
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item" href="{% url 'dashboard:norm_bulk_edit' %}">
+                                <i class="bi bi-calendar"></i> Нормы часов
+                            </a>
+                        </li>
                     </ul>
                 </li>
                 

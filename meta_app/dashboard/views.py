@@ -68,10 +68,6 @@ def employee_list(request):
 def employee_detail(request, employee_id):
     """Карточка сотрудника"""
     employee = get_object_or_404(Employee, id=employee_id)
-    
-    today = timezone.now().date()
-    current_month = today.month
-    current_year = today.year
 
     # Обычный сотрудник видит только себя
     if not (request.user.is_superuser or request.user.is_manager):
@@ -117,6 +113,17 @@ def employee_detail(request, employee_id):
     work_days = attendances.filter(is_present=True).count()
     avg_hours = total_hours / work_days if work_days > 0 else 0
 
+    # Количество выходов в выходные дни
+    weekend_days = attendances.filter(is_weekend_shift=True).count()
+
+    # Получаем норму часов за месяц
+    from meta_app.attendance.models import MonthlyWorkNorm
+    try:
+        norm = MonthlyWorkNorm.objects.get(year=year, month=month)
+        hours_norm = norm.hours_norm
+    except MonthlyWorkNorm.DoesNotExist:
+        hours_norm = 0
+
     # Названия месяцев
     months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
               'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
@@ -131,10 +138,10 @@ def employee_detail(request, employee_id):
             'total_overtime': total_overtime,
             'work_days': work_days,
             'avg_hours': avg_hours,
+            'hours_norm': hours_norm,
+            'weekend_days': weekend_days,
         },
         'can_edit': request.user.is_superuser or request.user.is_manager,
-        'current_month': current_month,
-        'current_year': current_year,
         'month_name': months[month - 1],
         'month': month,
         'year': year,
@@ -142,6 +149,8 @@ def employee_detail(request, employee_id):
         'prev_year': year if month > 1 else year - 1,
         'next_month': month + 1 if month < 12 else 1,
         'next_year': year if month < 12 else year + 1,
+        'current_month': today.month,
+        'current_year': today.year,
     })
 
 

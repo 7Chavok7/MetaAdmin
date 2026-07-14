@@ -1,0 +1,138 @@
+<!-- templates/attendance/norm_bulk_edit.html -->
+{% extends 'base/base.html' %}
+{% load attendance_filters %}
+
+{% block title %}Редактирование норм часов - MetaAdmin{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'dashboard:report_hours' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Назад к списку
+    </a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-pencil"></i> Редактирование норм часов</h5>
+    </div>
+    <div class="card-body">
+        <form method="post">
+            {% csrf_token %}
+            <input type="hidden" name="year" value="{{ year }}">
+            
+            <!-- Выбор года -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Год</label>
+                    <select name="year" class="form-select" onchange="this.form.submit()">
+                        {% for y in "2024,2025,2026,2027,2028"|split:"," %}
+                        <option value="{{ y }}" {% if year == y|add:0 %}selected{% endif %}>{{ y }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-bold">Норма по умолчанию</label>
+                    <input type="number" id="default_hours" class="form-control" step="0.1" placeholder="Введите норму">
+                </div>
+                <div class="col-md-2">
+                    <button type="button" class="btn btn-outline-secondary mt-4" onclick="fillAllMonths()">
+                        <i class="bi bi-fill"></i> Заполнить все
+                    </button>
+                </div>
+            </div>
+            
+            <hr>
+            
+            <!-- Таблица -->
+            <div class="row justify-content-center">
+                <div class="col-md-6">
+                    <table class="table table-bordered table-hover">
+                        <thead class="table-light">
+                            <tr>
+                                <th class="text-center" style="width: 50%;">Месяц</th>
+                                <th class="text-center" style="width: 50%;">Норма часов</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><strong>Январь</strong></td>
+                                <td>{{ form.month_1 }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Февраль</strong></td>
+                                <td>{{ form.month_2 }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Март</strong></td>
+                                <td>{{ form.month_3 }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Апрель</strong></td>
+                                <td>{{ form.month_4 }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Май</strong></td>
+                                <td>{{ form.month_5 }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Июнь</strong></td>
+                                <td>{{ form.month_6 }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Июль</strong></td>
+                                <td>{{ form.month_7 }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Август</strong></td>
+                                <td>{{ form.month_8 }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Сентябрь</strong></td>
+                                <td>{{ form.month_9 }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Октябрь</strong></td>
+                                <td>{{ form.month_10 }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Ноябрь</strong></td>
+                                <td>{{ form.month_11 }}</td>
+                            </tr>
+                            <tr>
+                                <td><strong>Декабрь</strong></td>
+                                <td>{{ form.month_12 }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="d-grid gap-2 d-md-flex justify-content-md-end mt-4">
+                <a href="{% url 'dashboard:norm_list' %}" class="btn btn-secondary">
+                    <i class="bi bi-x-circle"></i> Отмена
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save"></i> Сохранить все
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function fillAllMonths() {
+    const defaultHours = document.getElementById('default_hours').value;
+    if (!defaultHours) {
+        alert('Введите норму по умолчанию');
+        return;
+    }
+    
+    const inputs = document.querySelectorAll('input[type="number"]');
+    inputs.forEach(input => {
+        if (input.id !== 'default_hours') {
+            input.value = defaultHours;
+        }
+    });
+}
+</script>
+{% endblock %}
