@@ -19,10 +19,15 @@ def attendance_today(request):
     """Главная страница учета времени на сегодня"""
     today = timezone.now().date()
 
-    employees = Employee.objects.filter(
-        is_active=True,
-        is_superuser=False
-    ).order_by('last_name', 'first_name')
+    today = timezone.now().date()
+
+    if request.user.is_superuser or request.user.is_manager:
+        employees = Employee.objects.filter(
+            is_active=True,
+            is_superuser=False
+        ).order_by('last_name', 'first_name')
+    else:
+        employees = Employee.objects.filter(id=request.user.id)
 
     employee_data = []
     for employee in employees:
@@ -211,9 +216,12 @@ def attendance_all(request):
     date_from = request.GET.get('date_from')
     date_to = request.GET.get('date_to')
 
-    attendances = DailyAttendance.objects.filter(
-        employee__is_superuser=False
-    ).order_by('-record_date', 'employee__last_name')
+    # Базовый запрос
+    if request.user.is_superuser or request.user.is_manager:
+        attendances = DailyAttendance.objects.filter(
+            employee__is_superuser=False)
+    else:
+        attendances = DailyAttendance.objects.filter(employee=request.user)
 
     if employee_id:
         attendances = attendances.filter(employee_id=employee_id)
@@ -266,11 +274,17 @@ def attendance_calendar(request, year=None, month=None):
         })
 
     # Получаем всех сотрудников
-    employees = Employee.objects.filter(
-        is_active=True,
-        is_superuser=False
-    ).order_by('last_name', 'first_name')
-
+    if request.user.is_superuser or request.user.is_manager:
+        # Менеджеры видят всех
+        employees = Employee.objects.filter(
+            is_active=True,
+            is_superuser=False
+        ).order_by('last_name', 'first_name')
+    else:
+        # Сотрудник видит только себя
+        employees = Employee.objects.filter(
+            id=request.user.id
+        )
     # Фильтруем сотрудников по активности в выбранном месяце
     active_employees = []
     for employee in employees:

@@ -209,3 +209,58 @@ class EmployeeCreateForm(forms.ModelForm):
         if commit:
             employee.save()
         return employee
+
+
+class EmployeeSelfEditForm(forms.ModelForm):
+    """Форма для редактирования сотрудником своих данных (ограниченный набор полей)"""
+
+    class Meta:
+        model = Employee
+        fields = [
+            'phone_number',
+            'photo',
+            'registration_address',
+            'residence_address',
+            'marital_status',
+            'has_children',
+            'children_count',
+            'military_status',
+            'education_specialty',
+            'education_institution',
+            'education_year',
+            'previous_work_1',
+            'previous_work_2',
+            'previous_work_3',
+        ]
+        widgets = {
+            'registration_address': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'residence_address': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
+            'previous_work_1': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'previous_work_2': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'previous_work_3': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
+            'phone_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'marital_status': forms.Select(attrs={'class': 'form-control'}),
+            'military_status': forms.Select(attrs={'class': 'form-control'}),
+            'education_specialty': forms.TextInput(attrs={'class': 'form-control'}),
+            'education_institution': forms.TextInput(attrs={'class': 'form-control'}),
+            'education_year': forms.NumberInput(attrs={'class': 'form-control'}),
+            'children_count': forms.NumberInput(attrs={'class': 'form-control'}),
+            'photo': forms.FileInput(attrs={'class': 'form-control'}),
+            'has_children': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
+        }
+        labels = {
+            'phone_number': 'Телефон',
+            'photo': 'Фото',
+            'registration_address': 'Адрес регистрации',
+            'residence_address': 'Адрес проживания',
+            'marital_status': 'Семейное положение',
+            'has_children': 'Есть дети',
+            'children_count': 'Количество детей',
+            'military_status': 'Военная обязанность',
+            'education_specialty': 'Специальность по образованию',
+            'education_institution': 'Учебное заведение',
+            'education_year': 'Год окончания',
+            'previous_work_1': 'Предыдущее место работы 1',
+            'previous_work_2': 'Предыдущее место работы 2',
+            'previous_work_3': 'Предыдущее место работы 3',
+        }

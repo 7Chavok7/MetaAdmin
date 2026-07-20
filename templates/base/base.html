@@ -19,75 +19,79 @@
             </button>
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
-                    
-                    <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle {% if request.path == '/' or '/calendar' in request.path or '/attendance' in request.path %}active{% endif %}" 
-                        href="#" id="attendanceDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        <i class="bi bi-clock-history"></i> Учет времени
-                    </a>
-                    <ul class="dropdown-menu" aria-labelledby="attendanceDropdown">
-                        <li><a class="dropdown-item" href="{% url 'dashboard:home' %}">
-                            <i class="bi bi-calendar3"></i> Календарь
-                        </a></li>
-                        <li><a class="dropdown-item" href="{% url 'dashboard:attendance_today' %}">
-                            <i class="bi bi-calendar-day"></i> Сегодня
-                        </a></li>
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="{% url 'dashboard:attendance_all' %}">
-                            <i class="bi bi-list-ul"></i> Все записи
-                        </a></li>
-                    </ul>
-                </li>
-
-                <!-- Сотрудники -->
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="reportsDropdown" role="button" data-bs-toggle="dropdown">
-                        <i class="bi bi-people-fill"></i> Сотрудники
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{% url 'dashboard:employee_list' %}">
-                            <i class="bi bi-person"></i> Список сотрудников
-                            </a>
-                        </li>
-                        <li><a class="dropdown-item" href="{% url 'dashboard:employee_create' %}">
-                            <i class="bi bi-person-add"></i> Добавить сотрудника
-                            </a>
-                        </li>
-                    </ul>
-                </li>
-
-                <!-- Отчеты -->
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle" href="#" id="reportsDropdown" role="button" data-bs-toggle="dropdown">
-                        <i class="bi bi-bar-chart"></i> Отчеты
-                    </a>
-                    <ul class="dropdown-menu">
-                        <li><a class="dropdown-item" href="{% url 'dashboard:report_hours' %}">
-                                <i class="bi bi-clock"></i> Отработанные часы
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item" href="{% url 'dashboard:norm_bulk_edit' %}">
-                                <i class="bi bi-calendar"></i> Нормы часов
-                            </a>
-                        </li>
-                    </ul>
-                </li>
+                    {% if user.is_authenticated %}
+                        {% if user.is_superuser or user.is_manager %}
+                            <!-- Учет времени -->
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle {% if request.path == '/' or '/calendar' in request.path or '/attendance' in request.path %}active{% endif %}" 
+                                   href="#" id="attendanceDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                    <i class="bi bi-clock-history"></i> Учет времени
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="attendanceDropdown">
+                                    <li><a class="dropdown-item" href="{% url 'dashboard:home' %}">
+                                        <i class="bi bi-calendar3"></i> Календарь
+                                    </a></li>
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'dashboard:attendance_today' %}">
+                                            <i class="bi bi-calendar-day"></i> Сегодня
+                                        </a>
+                                    </li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'dashboard:attendance_all' %}">
+                                            <i class="bi bi-list-ul"></i> Все записи
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                            <!-- Сотрудники -->
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="employeeDropdown" role="button" data-bs-toggle="dropdown">
+                                    <i class="bi bi-people-fill"></i> Сотрудники
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="employeeDropdown">
+                                    <li><a class="dropdown-item" href="{% url 'dashboard:employee_list' %}">
+                                        <i class="bi bi-person"></i> Список сотрудников
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'dashboard:employee_create' %}">
+                                        <i class="bi bi-person-add"></i> Добавить сотрудника
+                                    </a></li>
+                                </ul>
+                            </li>
+                            <!-- Отчеты -->
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle" href="#" id="reportsDropdown" role="button" data-bs-toggle="dropdown">
+                                    <i class="bi bi-bar-chart"></i> Отчеты
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="reportsDropdown">
+                                    <li><a class="dropdown-item" href="{% url 'dashboard:report_hours' %}">
+                                        <i class="bi bi-clock"></i> Отработанные часы
+                                    </a></li>
+                                    <li>
+                                        <a class="dropdown-item" href="{% url 'dashboard:norm_bulk_edit' %}">
+                                            <i class="bi bi-calendar"></i> Нормы часов
+                                        </a>
+                                    </li>
+                                </ul>
+                            </li>
+                        {% endif %}
+                    {% endif %}
+                </ul>
                 
-                </ul>    
-                <ul class="navbar-nav">
+                <!-- Правая часть навигации -->
+                <ul class="navbar-nav ms-auto">
                     {% if user.is_authenticated %}
                         <li class="nav-item">
-                            <dd class="navbar-text text-light me-3">
-                                <i class="bi bi-person-circle text-light"></i> {{ user.full_name }}
-                            </dd>
-                        </li>
-                        {% if user.is_superuser %}
-                        <li class="nav-item">
-                            <a class="nav-link" href="/admin/">
-                                <i class="bi bi-shield-lock"></i> Админка
+                            <a class="nav-link text-light" href="{% url 'dashboard:employee_detail' user.id %}">
+                                <i class="bi bi-person-circle"></i> {{ user.full_name }}
                             </a>
                         </li>
+                        {% if user.is_superuser %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="/admin/">
+                                    <i class="bi bi-shield-lock"></i> Админка
+                                </a>
+                            </li>
                         {% endif %}
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'dashboard:logout' %}">
@@ -95,11 +99,11 @@
                             </a>
                         </li>
                     {% else %}
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'dashboard:login' %}">
-                            <i class="bi bi-box-arrow-in-right"></i> Войти
-                        </a>
-                    </li>
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'dashboard:login' %}">
+                                <i class="bi bi-box-arrow-in-right"></i> Войти
+                            </a>
+                        </li>
                     {% endif %}
                 </ul>
             </div>
@@ -109,14 +113,13 @@
     <div class="container mt-4">
         {% block content %}
         {% endblock %}
-        
     </div>
 
     <!-- СООБЩЕНИЯ -->
     {% if messages %}
     <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 9999;">
         {% for message in messages %}
-            <div class="toast show align-items-center  border-0 
+            <div class="toast show align-items-center border-0 
                         {% if message.tags == 'success' %}bg-success text-white
                         {% elif message.tags == 'error' %}bg-danger text-white
                         {% elif message.tags == 'warning' %}bg-warning text-dark
@@ -134,7 +137,7 @@
                         </i>
                         {{ message }}
                     </div>
-                    <button type="button" class="btn-close btn-close-dark me-2 m-auto" data-bs-dismiss="toast"></button>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
                 </div>
             </div>
         {% endfor %}
@@ -148,7 +151,6 @@
 
         function connectWebSocket() {
             try {
-                // Используем тот же протокол, что и страница
                 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
                 const wsUrl = protocol + '//' + window.location.host + '/ws/updates/';
                 
@@ -179,12 +181,10 @@
             }
         }
 
-        // Подключаемся при загрузке страницы
         document.addEventListener('DOMContentLoaded', function() {
             connectWebSocket();
         });
 
-        // Функция для показа уведомления
         function showNotification(message) {
             const existing = document.querySelector('.update-notification');
             if (existing) existing.remove();

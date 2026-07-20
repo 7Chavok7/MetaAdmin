@@ -6,7 +6,7 @@ from django.db import IntegrityError
 from django.utils import timezone
 from datetime import timedelta
 from meta_app.employees.models import Employee, Skill, EmployeeSkill
-from meta_app.employees.forms import EmployeeForm, EmployeeCreateForm
+from meta_app.employees.forms import EmployeeForm, EmployeeCreateForm, EmployeeSelfEditForm
 from meta_app.workstations.models import Workstation, EmployeeWorkstation
 from .forms import LoginForm
 
@@ -19,7 +19,11 @@ def is_manager(user):
 def login_view(request):
     """Страница входа"""
     if request.user.is_authenticated:
-        return redirect('dashboard:home')
+        # Редирект после входа в зависимости от роли
+        if request.user.is_superuser or request.user.is_manager:
+            return redirect('dashboard:home')
+        else:
+            return redirect('dashboard:employee_detail', employee_id=request.user.id)
 
     if request.method == 'POST':
         form = LoginForm(request, data=request.POST)
@@ -31,7 +35,12 @@ def login_view(request):
                 login(request, user)
                 messages.success(
                     request, f'Добро пожаловать, {user.full_name}!')
-                return redirect('dashboard:home')
+
+                # Редирект после входа в зависимости от роли
+                if user.is_superuser or user.is_manager:
+                    return redirect('dashboard:home')
+                else:
+                    return redirect('dashboard:employee_detail', employee_id=user.id)
             else:
                 messages.error(request, 'Неверный логин или пароль.')
         else:
@@ -51,16 +60,30 @@ def logout_view(request):
 
 
 @login_required
-@user_passes_test(is_manager)
 def employee_list(request):
-    """Список всех сотрудников (исключая суперпользователей)"""
+    """Список всех сотрудников (только для менеджеров и админов)"""
+    # Проверяем права
+    if not (request.user.is_superuser or request.user.is_manager):
+        messages.error(request, 'У вас нет доступа к списку сотрудников')
+        return redirect('dashboard:employee_detail', employee_id=request.user.id)
+
+    # Менеджер/админ видят всех активных сотрудников
     employees = Employee.objects.filter(
         is_active=True,
         is_superuser=False
     ).order_by('last_name', 'first_name')
+
+    # Исключаем уволенных
+    active_employees = []
+    for emp in employees:
+        if not emp.dismissal_date:
+            active_employees.append(emp)
+        elif emp.dismissal_date > timezone.now().date():
+            active_employees.append(emp)
+
     return render(request, 'dashboard/employee_list.html', {
-        'employees': employees,
-        'can_edit': request.user.is_superuser or request.user.is_manager,
+        'employees': active_employees,
+        'can_edit': True,
     })
 
 
@@ -69,24 +92,22 @@ def employee_detail(request, employee_id):
     """Карточка сотрудника"""
     employee = get_object_or_404(Employee, id=employee_id)
 
+    # Проверяем доступ
+    is_self = request.user.id == employee.id
+    is_admin_or_manager = request.user.is_superuser or request.user.is_manager
+
+    # Обычный сотрудник видит только себя
+    if not is_admin_or_manager and not is_self:
+        messages.error(request, 'У вас нет доступа к этой карточке')
+        return redirect('dashboard:employee_detail', employee_id=request.user.id)
+
     # Если сотрудник уволен и это не суперпользователь — запрещаем просмотр
     if employee.dismissal_date and employee.dismissal_date < timezone.now().date():
         if not request.user.is_superuser:
             messages.error(
                 request, 'Карточка уволенного сотрудника недоступна')
-            return redirect('dashboard:employee_list')
-
-    # Обычный сотрудник видит только себя
-    if not (request.user.is_superuser or request.user.is_manager):
-        if request.user.id != employee.id:
-            messages.error(request, 'У вас нет доступа к этой карточке')
             return redirect('dashboard:home')
-
-    # Администратор скрыт от обычных пользователей
-    if employee.is_superuser and not request.user.is_superuser:
-        messages.error(request, 'Доступ к карточке администратора ограничен')
-        return redirect('dashboard:home')
-
+        
     # Получаем навыки сотрудника
     skills = employee.employee_skills.select_related('skill').all()
 
@@ -139,7 +160,7 @@ def employee_detail(request, employee_id):
         'employee': employee,
         'skills': skills,
         'workstation_assignments': workstation_assignments,
-        'attendances': attendances[:10],
+        'attendances': attendances[:5],
         'stats': {
             'total_hours': total_hours,
             'total_overtime': total_overtime,
@@ -148,7 +169,8 @@ def employee_detail(request, employee_id):
             'hours_norm': hours_norm,
             'weekend_days': weekend_days,
         },
-        'can_edit': request.user.is_superuser or request.user.is_manager,
+        'can_edit': request.user.is_superuser or request.user.is_manager or is_self,
+        'is_self': is_self,
         'month_name': months[month - 1],
         'month': month,
         'year': year,
@@ -190,27 +212,42 @@ def employee_create(request):
 
 
 @login_required
-@user_passes_test(is_manager)
 def employee_edit(request, employee_id):
     """Редактирование сотрудника"""
     employee = get_object_or_404(Employee, id=employee_id)
 
-    if not (request.user.is_superuser or request.user.is_manager):
+    is_self = request.user.id == employee.id
+
+    # Проверка прав
+    if not (request.user.is_superuser or request.user.is_manager or is_self):
         messages.error(request, 'У вас нет прав на редактирование!')
         return redirect('dashboard:home')
 
-    if request.method == 'POST':
-        form = EmployeeForm(request.POST, request.FILES, instance=employee)
-        if form.is_valid():
-            employee_obj = form.save(commit=False)
-            employee_obj._updated_by_user = request.user
-            employee_obj.save()
-
-            messages.success(
-                request, f'Данные сотрудника {employee.full_name} успешно обновлены!')
-            return redirect('dashboard:home')
+    # Сотрудник может редактировать только свои данные
+    if is_self and not (request.user.is_superuser or request.user.is_manager):
+        # Ограничиваем поля для саморедактирования
+        if request.method == 'POST':
+            form = EmployeeSelfEditForm(
+                request.POST, request.FILES, instance=employee)
+        else:
+            form = EmployeeSelfEditForm(instance=employee)
     else:
-        form = EmployeeForm(instance=employee)
+        # Менеджер/суперпользователь могут редактировать всё
+        if request.method == 'POST':
+            form = EmployeeForm(request.POST, request.FILES, instance=employee)
+        else:
+            form = EmployeeForm(instance=employee)
+
+    if request.method == 'POST' and form.is_valid():
+        employee_obj = form.save(commit=False)
+        employee_obj._updated_by_user = request.user
+        employee_obj.save()
+        messages.success(
+            request, f'Данные сотрудника {employee.full_name} успешно обновлены!')
+        return redirect('dashboard:employee_detail', employee_id=employee.id)
+
+    # Подготовка initial данных для дат
+    if not request.method == 'POST':
         if employee.birth_date:
             form.initial['birth_date'] = employee.birth_date.strftime(
                 '%Y-%m-%d')
@@ -223,6 +260,8 @@ def employee_edit(request, employee_id):
     return render(request, 'dashboard/employee_edit.html', {
         'form': form,
         'employee': employee,
+        'is_self': is_self,
+        'can_edit': request.user.is_superuser or request.user.is_manager or is_self,
     })
 
 
@@ -414,3 +453,13 @@ def employee_workstation_set_primary(request, employee_id, workstation_id):
     messages.success(
         request, f'Участок "{assignment.workstation.name}" установлен как основной!')
     return redirect('dashboard:employee_workstations', employee_id=employee.id)
+
+
+@login_required
+def home_redirect(request):
+    """Главная страница с редиректом в зависимости от роли"""
+    if request.user.is_superuser or request.user.is_manager:
+        return redirect('dashboard:attendance_calendar')
+    else:
+        # Обычный сотрудник видит только свой календарь
+        return redirect('dashboard:attendance_calendar')

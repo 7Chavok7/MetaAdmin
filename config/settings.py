@@ -118,6 +118,9 @@ LOGIN_URL = '/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/login/'
 
+# Настройки для сотрудников (self-редактирование)
+ALLOW_SELF_EDIT = True
+
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATIC_ROOT = '/app/staticfiles'  # ← добавить эту строку
