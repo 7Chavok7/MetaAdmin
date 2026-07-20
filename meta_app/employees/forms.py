@@ -218,7 +218,7 @@ class EmployeeSelfEditForm(forms.ModelForm):
         model = Employee
         fields = [
             'patronymic',
-            'dirth_date',
+            'birth_date',
             'phone_number',
             'photo',
             'registration_address',
