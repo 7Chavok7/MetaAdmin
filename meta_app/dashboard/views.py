@@ -223,6 +223,25 @@ def employee_edit(request, employee_id):
         messages.error(request, 'У вас нет прав на редактирование!')
         return redirect('dashboard:home')
 
+    if is_self and not (request.user.is_superuser or request.user.is_manager):
+        if request.method == 'POST':
+            form = EmployeeSelfEditForm(
+                request.POST, request.FILES, instance=employee)
+        else:
+            form = EmployeeSelfEditForm(instance=employee)
+            # Явно передаём дату в правильном формате
+            if employee.birth_date:
+                form.initial['birth_date'] = employee.birth_date.strftime(
+                    '%Y-%m-%d')
+    else:
+        if request.method == 'POST':
+            form = EmployeeForm(request.POST, request.FILES, instance=employee)
+        else:
+            form = EmployeeForm(instance=employee)
+            if employee.birth_date:
+                form.initial['birth_date'] = employee.birth_date.strftime(
+                    '%Y-%m-%d')
+                
     # Сотрудник может редактировать только свои данные
     if is_self and not (request.user.is_superuser or request.user.is_manager):
         # Ограничиваем поля для саморедактирования

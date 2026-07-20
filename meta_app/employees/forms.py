@@ -217,6 +217,8 @@ class EmployeeSelfEditForm(forms.ModelForm):
     class Meta:
         model = Employee
         fields = [
+            'patronymic',
+            'dirth_date',
             'phone_number',
             'photo',
             'registration_address',
@@ -233,12 +235,14 @@ class EmployeeSelfEditForm(forms.ModelForm):
             'previous_work_3',
         ]
         widgets = {
+            'birth_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'registration_address': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
             'residence_address': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
             'previous_work_1': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
             'previous_work_2': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
             'previous_work_3': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
             'phone_number': forms.TextInput(attrs={'class': 'form-control'}),
+            'patronymic': forms.TextInput(attrs={'class': 'form-control'}),
             'marital_status': forms.Select(attrs={'class': 'form-control'}),
             'military_status': forms.Select(attrs={'class': 'form-control'}),
             'education_specialty': forms.TextInput(attrs={'class': 'form-control'}),
@@ -249,6 +253,8 @@ class EmployeeSelfEditForm(forms.ModelForm):
             'has_children': forms.CheckboxInput(attrs={'class': 'form-check-input'}),
         }
         labels = {
+            'patronymic': 'Отчество',
+            'birth_date': 'Дата рождения',
             'phone_number': 'Телефон',
             'photo': 'Фото',
             'registration_address': 'Адрес регистрации',
