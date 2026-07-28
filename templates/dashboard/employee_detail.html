@@ -28,6 +28,13 @@
             <i class="bi bi-pencil"></i> Редактировать
         </a>
         {% endif %}
+
+        <!-- Кнопка "Хочу в отпуск" (только для самого сотрудника или менеджера) -->
+        {% if user.is_authenticated and user.id == employee.id or user.is_superuser or user.is_manager %}
+        <a href="{% url 'dashboard:vacation_create' %}" class="btn btn-success">
+            <i class="bi bi-calendar-plus"></i> Хочу в отпуск
+        </a>
+        {% endif %}
     </div>
 </div>
 

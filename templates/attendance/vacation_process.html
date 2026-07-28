@@ -1,0 +1,55 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Обработка заявки - MetaAdmin{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'dashboard:vacation_list' %}" class="btn btn-outline-secondary">
+        <i class="bi bi-arrow-left"></i> Назад к списку
+    </a>
+</div>
+
+<div class="row justify-content-center">
+    <div class="col-md-6">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-check2-circle"></i> Обработка заявки</h5>
+            </div>
+            <div class="card-body">
+                <div class="alert alert-info">
+                    <strong>{{ vacation.employee.full_name }}</strong>
+                    <br>{{ vacation.start_date|date:"d.m.Y" }} — {{ vacation.end_date|date:"d.m.Y" }}
+                    <br><small class="text-muted">{{ vacation.get_dates|length }} дней</small>
+                    {% if vacation.comment %}
+                    <br><br><strong>Комментарий сотрудника:</strong>
+                    <br>{{ vacation.comment }}
+                    {% endif %}
+                </div>
+                
+                <form method="post">
+                    {% csrf_token %}
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.status.id_for_label }}" class="form-label fw-bold">Решение</label>
+                        {{ form.status }}
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="{{ form.comment.id_for_label }}" class="form-label fw-bold">Комментарий</label>
+                        {{ form.comment }}
+                    </div>
+                    
+                    <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                        <a href="{% url 'dashboard:vacation_list' %}" class="btn btn-secondary">
+                            <i class="bi bi-x-circle"></i> Отмена
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Обработать
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

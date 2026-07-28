@@ -169,3 +169,76 @@ class MonthlyWorkNorm(models.Model):
         
     def __str__(self):
         return f"{self.month}/{self.year}: {self.hours_norm}"
+    
+    
+class VacationRequest(models.Model):
+    """Заявка на отпуск"""
+    
+    STATUS_CHOICE = [
+        ('pending', 'Ожидает подтверждения'),
+        ('approved', 'Подтвержден'),
+        ('rejected', 'Отклонен'),
+        ('cancelled', 'Отменен'),
+    ]
+    
+    employee = models.ForeignKey(
+        'employees.Employee',
+        on_delete=models.CASCADE,
+        related_name='vacantion_requests',
+        verbose_name='Сотрудник'
+    )
+    start_date = models.DateField(
+        verbose_name='Дата начала'
+    )
+    end_date = models.DateField(
+        verbose_name='Дата окончания'
+    )
+    status = models.CharField(
+        choices=STATUS_CHOICE,
+        default='pending',
+        verbose_name='Статус'
+    )
+    comment = models.TextField(
+        blank=True,
+        verbose_name='Комментарий'
+    )
+    processed_by = models.ForeignKey(
+        'employees.Employee',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='processed_vacantion',
+        verbose_name='Обработал'
+    )
+    processed_at = models.DateTimeField(
+        blank=True,
+        null=True,
+        verbose_name='Дата обработки'
+    )
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата создания запроса'
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Дата обновления запроса'
+    )
+    
+    
+    class Meta:
+        verbose_name = 'Заявка на отпуск'
+        verbose_name_plural = 'Запросы на отпуск'
+        ordering = ['-created_at']
+        
+    def __str__(self):
+        return f"Отпуск {self.employee.last_name} {self.employee.short_name} - {self.start_date} - {self.end_date}"
+    
+    def get_dates(self):
+        """Возвращает список всех дат отпуска"""
+        from datetime import timedelta as TD
+        dates = []
+        current = self.start_date
+        while current <= self.end_date:
+            dates.append(current)
+            current += TD(days=1)
+        return dates

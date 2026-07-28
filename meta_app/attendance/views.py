@@ -5,9 +5,13 @@ from django.utils import timezone
 from datetime import datetime, timedelta
 from meta_app.employees.models import Employee
 from meta_app.workstations.models import EmployeeWorkstation
-from .models import DailyAttendance, MonthlyWorkNorm
-from .forms import AttendanceForm, MonthlyWorkNormForm
-
+from .models import DailyAttendance, MonthlyWorkNorm, VacationRequest
+from .forms import (
+    AttendanceForm, 
+    MonthlyWorkNormForm, 
+    VacationRequestForm, 
+    VacationRequestProcessForm
+)
 
 def is_manager(user):
     return user.is_authenticated and (user.is_superuser or user.is_manager)
@@ -371,6 +375,7 @@ def attendance_calendar(request, year=None, month=None):
         'can_edit': request.user.is_superuser,
     })
 
+
 @login_required
 @user_passes_test(is_manager)
 def report_employee_hours(request):
@@ -390,33 +395,29 @@ def report_employee_hours(request):
     # Список участков для фильтра
     workstations = Workstation.objects.filter(is_active=True).order_by('name')
 
-    # Получаем сотрудников
+    # Получаем сотрудников (QuerySet)
     employees = Employee.objects.filter(
         is_active=True,
         is_superuser=False
     ).order_by('last_name', 'first_name')
 
-    # Фильтруем по дате увольнения
-    active_employees = []
+    # Фильтруем по дате увольнения (оставляем QuerySet)
+    active_employee_ids = []
     for emp in employees:
         if not emp.dismissal_date:
-            active_employees.append(emp)
+            active_employee_ids.append(emp.id)
         else:
-            # Показываем только если уволен в этом месяце
-            if emp.dismissal_date.year == year and emp.dismissal_date.month == month:
-                active_employees.append(emp)
-            # Если уволен в будущем — показываем
-            elif emp.dismissal_date.year > year or (emp.dismissal_date.year == year and emp.dismissal_date.month > month):
-                active_employees.append(emp)
-            # Если уволен в прошлом — НЕ показываем
+            # Показываем только если уволен в этом месяце или позже
+            if emp.dismissal_date.year > year or (emp.dismissal_date.year == year and emp.dismissal_date.month >= month):
+                active_employee_ids.append(emp.id)
 
-    employees = active_employees
+    # Фильтруем QuerySet по ID (оставляем QuerySet)
+    employees = Employee.objects.filter(id__in=active_employee_ids)
 
     # Фильтр по основному участку
     if workstation_id and workstation_id != 'all':
         try:
             ws = Workstation.objects.get(id=workstation_id)
-            # Фильтруем сотрудников, у которых ЭТОТ участок является ОСНОВНЫМ
             employees = employees.filter(
                 workstation_assignments__workstation=ws,
                 workstation_assignments__is_primary=True
@@ -681,3 +682,95 @@ def norm_bulk_edit(request):
         'months': ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
                    'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'],
     })
+
+
+@login_required
+def vacation_create(request):
+    """Создание заявки на отпуск"""
+    if request.method == 'POST':
+        form = VacationRequestForm(request.POST)
+        if form.is_valid():
+            vacation = form.save(commit=False)
+            vacation.employee = request.user
+            vacation.status = 'pending'
+            vacation.save()
+            messages.success(request, 'Заявка на отпуск отправлена на согласование')
+            return redirect('dashboard:vacation_list')
+    else:
+        form = VacationRequestForm()
+        
+    return render(request, 'attendance/vacation_create.html', {
+        'form': form,
+    })    
+    
+
+@login_required
+def vacation_list(request):
+    """Список заявок на отпуск"""
+    # Для менеджера - все заявки, для сотрудника - только свои.
+    if request.user.is_superuser or request.user.is_manager:
+        vacations = VacationRequest.objects.all().order_by('-created_at')
+    else:
+        vacations = VacationRequest.objects.filter(employee=request.user).order_by('-created_at')
+        
+    return render(request, 'attendance/vacation_list.html', {
+                  'vacations': vacations,
+                  'is_manager': request.user.is_superuser or request.user.is_manager,
+    })
+    
+
+@login_required
+@user_passes_test(is_manager)
+def vacation_process(request, vacation_id):
+    """Обработка заявки на отпуск (только для менеджеров)"""
+    vacation = get_object_or_404(VacationRequest, id=vacation_id)
+    
+    if request.method == 'POST':
+        form = VacationRequestProcessForm(request.POST, instance=vacation)
+        if form.is_valid():
+            vacation = form.save(commit=False)
+            vacation.processed_by = request.user
+            vacation.processed_at = timezone.now()
+            vacation.save()
+            
+            if vacation.status == 'approved':
+                from .models import DailyAttendance
+                for date in vacation.get_date():
+                    DailyAttendance.objects.get_or_create(
+                        employee=vacation.employee,
+                        record_date=date,
+                        defaults={
+                            'workstation': None,
+                            'status': 'vacation',
+                            'is_present': False,
+                            'note': f'Отпуск (одобрен {request.user.short_name})',
+                        }
+                    )
+                messages.success(request, f'Отпуск для {vacation.employee.short_name} подтвержден!')
+            elif vacation.status == 'rejected':
+                messages.warning(request, f'Заявка на отпуск для {vacation.employee.short_name} отклонена.')
+                
+            return redirect('dashboard:vacation_list')
+    
+    else:
+        form = VacationRequestProcessForm(instance=vacation)
+        
+    return render(request, 'attendance/vacation_process.html', {
+        'form': form,
+        'vacation': vacation
+    })
+    
+    
+@login_required
+def vacation_cancel(request, vacation_id):
+    """Отмена заявки на отпуск (только для автора)"""
+    vacation = get_object_or_404(VacationRequest, id=vacation_id, employee=request.user)
+    
+    if vacation.status in ['approved', 'rejected']:
+        messages.error(request, 'Нельзя отменить уже обработанную заявку.')
+        return redirect('dashboard:vacation_list')
+    
+    vacation.status = 'cancelled'
+    vacation.save()
+    messages.success(request, 'Заявка на отпуск отмененаю')
+    return redirect('dashboard:vacation_list')

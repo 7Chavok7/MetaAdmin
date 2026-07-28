@@ -61,4 +61,13 @@ urlpatterns = [
      path('norms/delete/<int:norm_id>/', attendance_views.norm_delete, name='norm_delete'),
      path('norms/fill/', attendance_views.norm_fill, name='norm_fill'),
      path('norms/bulk-edit/', attendance_views.norm_bulk_edit, name='norm_bulk_edit'),
+     
+     # Отпуска
+    path('vacations/', attendance_views.vacation_list, name='vacation_list'),
+    path('vacations/create/', attendance_views.vacation_create,
+         name='vacation_create'),
+    path('vacations/process/<int:vacation_id>/',
+         attendance_views.vacation_process, name='vacation_process'),
+    path('vacations/cancel/<int:vacation_id>/',
+         attendance_views.vacation_cancel, name='vacation_cancel'),
 ]

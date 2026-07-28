@@ -323,7 +323,12 @@ class Employee(AbstractUser):
     def full_name(self):
         return f"{self.last_name} {self.first_name} {self.patronymic}".strip()
     
-    
+    @property
+    def short_name(self):
+        if self.patronymic:
+            return f"{self.last_name} {self.first_name[:1]}.{self.patronymic[:1]}."
+        return f"{self.last_name} {self.first_name[:1]}."
+
     @property
     def experience_years(self):
         """Стаж в годах (полных лет)"""

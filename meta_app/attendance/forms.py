@@ -1,6 +1,6 @@
 # meta_app/attendace/forms.py | A.Grrachev
 from django import forms
-from .models import DailyAttendance, MonthlyWorkNorm
+from .models import DailyAttendance, MonthlyWorkNorm, VacationRequest
 
 
 class AttendanceForm(forms.ModelForm):
@@ -115,4 +115,67 @@ class MonthlyWorkNormForm(forms.ModelForm):
             'year': 'Год',
             'month': 'Месяц',
             'hours_norm': 'Норма часов',
+        }
+
+
+class VacationRequestForm(forms.ModelForm):
+    """Форма для создания заявки на отпуск"""
+    
+    class Meta:
+        model = VacationRequest
+        fields = ['start_date', 'end_date', 'comment']
+        widgets = {
+            'start_date': forms.DateInput(
+                attrs={
+                    'type': 'date',
+                    'class': 'form-control'
+                }),
+            'end_date': forms.DateInput(
+                attrs={
+                    'type': 'date',
+                    'class': 'form-control'
+                }),
+            'comment': forms.TelInput(
+                attrs={
+                    'rows': 2,
+                    'class': 'form-control'
+                }),
+        }
+        labels = {
+            'start_date': 'Дата начала отпуска',
+            'end_date': 'Даа окончания отпуска',
+            'comment': 'Комментарий'
+        }
+        
+    def clean(self):
+        """Проверка на правильность ввода"""
+        cleaned_data = super().clean()
+        start_date = cleaned_data.get('start_date')
+        end_date = cleaned_data.get('end_date')
+        
+        if start_date and end_date and start_date > end_date:
+            raise forms.ValidationError('Дата начала не может быть позжк даты окончания')
+        return cleaned_data
+    
+    
+class VacationRequestProcessForm(forms.ModelForm):
+    """Форма обработки заявки на отпуск (для начальника)"""
+    
+    class Meta:
+        model = VacationRequest
+        fields = ['status', 'comment']
+        widgets = {
+            'status': forms.Select(
+                attrs={
+                    'class': 'form-select'
+                }),
+            'comment': forms.TextInput(
+                attrs={
+                    'rows': 2,
+                    'class': 'form-control'
+                })
+        }
+        labels = {
+            'status': 'Статус',
+            'comment': 'Комментарий'
         }
