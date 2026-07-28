@@ -27,14 +27,7 @@
                                    href="#" id="attendanceDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
                                     <i class="bi bi-clock-history"></i> Учет времени
                                 </a>
-                                <li class="nav-item">
-                                    <a class="nav-link" href="{% url 'dashboard:vacation_list' %}">
-                                        <i class="bi bi-calendar-check"></i> Отпуска
-                                        {% if pending_vacations_count > 0 %}
-                                            <span class="badge bg-danger ms-1">{{ pending_vacations_count }}</span>
-                                        {% endif %}
-                                    </a>
-                                </li>
+                                
                                 <ul class="dropdown-menu" aria-labelledby="attendanceDropdown">
                                     <li><a class="dropdown-item" href="{% url 'dashboard:home' %}">
                                         <i class="bi bi-calendar3"></i> Календарь
@@ -64,6 +57,15 @@
                                     <li><a class="dropdown-item" href="{% url 'dashboard:employee_create' %}">
                                         <i class="bi bi-person-add"></i> Добавить сотрудника
                                     </a></li>
+                                    <hr>
+                                    <li class="nav-item">
+                                        <a class="dropdown-item" href="{% url 'dashboard:vacation_list' %}">
+                                            <i class="bi bi-calendar-check"></i> Отпуска
+                                            {% if pending_vacations_count > 0 %}
+                                                <span class="badge bg-danger ms-1">{{ pending_vacations_count }}</span>
+                                            {% endif %}
+                                        </a>
+                                    </li>
                                 </ul>
                             </li>
                             <!-- Отчеты -->

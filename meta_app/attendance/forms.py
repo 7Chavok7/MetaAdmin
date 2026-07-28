@@ -135,7 +135,7 @@ class VacationRequestForm(forms.ModelForm):
                     'type': 'date',
                     'class': 'form-control'
                 }),
-            'comment': forms.TelInput(
+            'comment': forms.TextInput(
                 attrs={
                     'rows': 2,
                     'class': 'form-control'

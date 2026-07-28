@@ -194,6 +194,7 @@ class VacationRequest(models.Model):
         verbose_name='Дата окончания'
     )
     status = models.CharField(
+        max_length=20,
         choices=STATUS_CHOICE,
         default='pending',
         verbose_name='Статус'
