@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'meta_app.workstations',
     'meta_app.attendance',
     'meta_app.dashboard',
+    'meta_app.messenger',
 
 ]
 
@@ -124,7 +125,7 @@ ALLOW_SELF_EDIT = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
-STATIC_ROOT = '/app/staticfiles'  # ← добавить эту строку
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
@@ -137,14 +138,14 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 # Channels
 ASGI_APPLICATION = 'config.asgi.application'
 
-# CHANNEL_LAYERS = {
-#     'default': {
-#         'BACKEND': 'channels_redis.core.RedisChannelLayer',
-#         'CONFIG': {
-#             "hosts": [('127.0.0.1', 6379)],
-#         },
-#     },
-# }
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        # 'CONFIG': {
+        #     "hosts": [('127.0.0.1', 6379)],
+        # },
+    },
+}
 
 # Для локальной разработки без Redis
 CHANNEL_LAYERS = {

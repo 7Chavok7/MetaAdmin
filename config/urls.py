@@ -6,6 +6,8 @@ from django.conf.urls.static import static
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('meta_app.dashboard.urls')),
+    path('messenger/', include('meta_app.messenger.urls')),
+    path('api/', include('meta_app.messenger.api_urls')),
 ]
 
 if settings.DEBUG:

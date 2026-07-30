@@ -1,0 +1,32 @@
+/* static/messenger/css/fallback.css */
+
+/* Для браузеров, которые не поддерживают flexbox */
+.messenger-container {
+    display: table;
+    width: 100%;
+    height: 80vh;
+}
+
+.chat-sidebar {
+    display: table-cell;
+    width: 320px;
+    vertical-align: top;
+}
+
+.chat-main {
+    display: table-cell;
+    vertical-align: top;
+}
+
+/* Для браузеров, которые не поддерживают border-radius */
+.messenger-container,
+.message-content {
+    border-radius: 8px;
+}
+
+/* Для старых версий Yandex Browser */
+.chat-messages {
+    scrollbar-face-color: #c1c7cd;
+    scrollbar-track-color: #f1f1f1;
+    scrollbar-arrow-color: #6c757d;
+}

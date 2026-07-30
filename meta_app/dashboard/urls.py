@@ -1,4 +1,4 @@
-from django.urls import path
+from django.urls import path, include
 from . import views
 from meta_app.attendance import views as attendance_views
 
@@ -70,4 +70,7 @@ urlpatterns = [
          attendance_views.vacation_process, name='vacation_process'),
     path('vacations/cancel/<int:vacation_id>/',
          attendance_views.vacation_cancel, name='vacation_cancel'),
+    
+    # Мессенджер
+    path('messenger/', include('meta_app.messenger.urls')),
 ]

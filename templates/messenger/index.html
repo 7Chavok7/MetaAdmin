@@ -1,0 +1,61 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'messenger/css/messenger.css' %}">
+{% endblock %}
+
+{% block title %}Мессенджер - MetaAdmin{% endblock %}
+
+{% block content %}
+<div class="messenger-wrapper">
+    <div class="container-fluid p-0 h-100">
+        <div class="row g-0 h-100">
+            <!-- Левая панель — список чатов -->
+            <div class="col-12 col-md-4 col-lg-3 border-end bg-light chat-sidebar">
+                <!-- Заголовок -->
+                <div class="p-3 border-bottom bg-white d-flex justify-content-between align-items-center flex-shrink-0">
+                    <h5 class="mb-0">
+                        <i class="bi bi-chat-dots"></i> Мессенджер
+                    </h5>
+                    <a href="/messenger/create/" class="btn btn-sm btn-success">
+                        <i class="bi bi-plus"></i>
+                    </a>
+                </div>
+                
+                <!-- Поиск -->
+                <div class="p-2 border-bottom bg-white flex-shrink-0">
+                    <input type="text" id="search-chats" class="form-control form-control-sm" placeholder="Поиск...">
+                </div>
+                
+                <!-- Список чатов -->
+                <div class="flex-grow-1 overflow-auto chat-list-scroll" id="chat-list">
+                    <div class="text-center text-muted py-4">
+                        <i class="bi bi-arrow-repeat"></i> Загрузка чатов...
+                    </div>
+                </div>
+            </div>
+
+            <!-- Правая панель — чат -->
+            <div class="col-12 col-md-8 col-lg-9 bg-white chat-main">
+                <div id="chat-content" class="d-flex flex-column h-100">
+                    <!-- Пустое состояние -->
+                    <div class="empty-chat flex-grow-1 d-flex flex-column align-items-center justify-content-center text-muted">
+                        <i class="bi bi-chat-dots" style="font-size: 64px;"></i>
+                        <h5 class="mt-3">Выберите чат</h5>
+                        <p class="text-muted">Начните общение с коллегами</p>
+                        <a href="/messenger/create/" class="btn btn-primary">
+                            <i class="bi bi-plus"></i> Создать чат
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    window.userId = {{ user.id }};
+</script>
+<script src="{% static 'messenger/js/messenger.js' %}?v=1.0.3"></script>
+{% endblock %}

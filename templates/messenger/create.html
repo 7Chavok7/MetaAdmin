@@ -1,0 +1,104 @@
+{% extends 'base/base.html' %} 
+
+{% block title %}Создать чат - MetaAdmin{% endblock %} 
+
+{% block content %}
+<div class="mb-3">
+  <a href={% url "messenger:index" %} class="btn btn-outline-secondary">
+    <i class="bi bi-arrow-left"></i> Назад
+  </a>
+</div>
+
+<div class="row justify-content-center">
+  <div class="col-md-6">
+    <div class="card shadow-sm">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-plus"></i> Создать чат</h5>
+      </div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+
+          <div class="mb-3 form-check">
+            <input
+              type="checkbox"
+              name="is_group"
+              id="is_group"
+              class="form-check-input"
+              onchange="toggleGroupName()"
+            />
+            <label for="is_group" class="form-check-label">Групповой чат</label>
+          </div>
+
+          <div class="mb-3" id="group-name-field" style="display: none">
+            <label for="chat_name" class="form-label fw-bold"
+              >Название чата</label
+            >
+            <input
+              type="text"
+              name="chat_name"
+              class="form-control"
+              placeholder="Название группы"
+            />
+          </div>
+
+          <div class="mb-3">
+            <label class="form-label fw-bold">Участники</label>
+            <div class="list-group" style="max-height: 300px; overflow-y: auto">
+              <div class="list-group-item">
+                <input
+                  type="checkbox"
+                  id="select-all"
+                  class="form-check-input me-2"
+                  onchange="toggleAll()"
+                />
+                <label for="select-all" class="form-check-label"
+                  >Выбрать всех</label
+                >
+              </div>
+              {% for emp in employees %}
+              <div class="list-group-item">
+                <input
+                  type="checkbox"
+                  name="participants"
+                  value="{{ emp.id }}"
+                  class="form-check-input me-2 participant-checkbox"
+                />
+                <label class="form-check-label">
+                  {{ emp.full_name }}
+                  <small class="text-muted ms-2"
+                    >({{ emp.position|default:"—" }})</small
+                  >
+                </label>
+              </div>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="d-grid">
+            <button type="submit" class="btn btn-success">
+              <i class="bi bi-plus"></i> Создать чат
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  function toggleGroupName() {
+    const isGroup = document.getElementById("is_group").checked;
+    document.getElementById("group-name-field").style.display = isGroup
+      ? "block"
+      : "none";
+  }
+
+  function toggleAll() {
+    const checked = document.getElementById("select-all").checked;
+    document
+      .querySelectorAll(".participant-checkbox")
+      .forEach((cb) => (cb.checked = checked));
+  }
+</script>
+{% endblock %}

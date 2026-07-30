@@ -23,7 +23,8 @@ def login_view(request):
         if request.user.is_superuser or request.user.is_manager:
             return redirect('dashboard:home')
         else:
-            return redirect('dashboard:employee_detail', employee_id=request.user.id)
+            # Обычные сотрудники → в мессенджер
+            return redirect('messenger:index')
 
     if request.method == 'POST':
         form = LoginForm(request, data=request.POST)
@@ -480,5 +481,5 @@ def home_redirect(request):
     if request.user.is_superuser or request.user.is_manager:
         return redirect('dashboard:attendance_calendar')
     else:
-        # Обычный сотрудник видит только свой календарь
-        return redirect('dashboard:attendance_calendar')
+        # Обычный сотрудник → в мессенджер
+        return redirect('messenger:index')
