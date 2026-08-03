@@ -75,19 +75,14 @@
                 <span class="badge bg-light text-dark ms-2">Норма: {{ hours_norm|floatformat:1 }} ч.</span>
             </h5>
             <div class="btn-group">
-                <!-- Кнопка "Назад" -->
                 <a href="?{% if selected_workstation and selected_workstation != 'all' %}workstation={{ selected_workstation }}&{% endif %}year={% if month == 1 %}{{ year|add:-1 }}{% else %}{{ year }}{% endif %}&month={% if month == 1 %}12{% else %}{{ month|add:-1 }}{% endif %}" 
                 class="btn btn-light btn-sm">
                     <i class="bi bi-chevron-left"></i>
                 </a>
-                
-                <!-- Кнопка "Сегодня" -->
                 <a href="?{% if selected_workstation and selected_workstation != 'all' %}workstation={{ selected_workstation }}&{% endif %}year={{ current_year }}&month={{ current_month }}" 
                 class="btn btn-light btn-sm">
                     <i class="bi bi-calendar-check"></i>
                 </a>
-                
-                <!-- Кнопка "Вперед" -->
                 <a href="?{% if selected_workstation and selected_workstation != 'all' %}workstation={{ selected_workstation }}&{% endif %}year={% if month == 12 %}{{ year|add:1 }}{% else %}{{ year }}{% endif %}&month={% if month == 12 %}1{% else %}{{ month|add:1 }}{% endif %}" 
                 class="btn btn-light btn-sm">
                     <i class="bi bi-chevron-right"></i>
@@ -103,12 +98,14 @@
                         <th>#</th>
                         <th style="min-width: 150px;">Сотрудник</th>
                         <th>Участок</th>
-                        <th class="text-center">Дней</th>
-                        <th class="text-center">Отработано</th>
+                        <th class="text-center">Дней (раб.)</th>
+                        <th class="text-center">Часы (раб.)</th>
+                        <th class="text-center">Часы (вых.)</th>
+                        <th class="text-center">Всего часов</th>
                         <th class="text-center">% от нормы</th>
                         <th class="text-center">Переработка</th>
-                        <th class="text-center">Выходные</th>
-                        {% comment %} <th class="text-center">Среднее в день</th> {% endcomment %}
+                        <!--<th class="text-center">Дней с пер.</th>-->
+                        <th class="text-center">Выходные дни</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -123,72 +120,63 @@
                         </td>
                         <td>{{ item.workstation }}</td>
                         <td class="text-center">{{ item.work_days }}</td>
+                        <td class="text-center">{{ item.work_hours|floatformat:1 }}</td>
                         <td class="text-center">
-                            <strong>
-                                {{ item.total_hours|floatformat:1 }}ч.
-                            </strong>
-                            <span class="text-muted">
-                                ({{ item.norm_hours|floatformat:1 }})
-                            </span>
+                            <span class="text-muted">{{ item.weekend_hours|floatformat:1 }}</span>
                         </td>
                         <td class="text-center">
-                        {% if item.total_hours > 0 %}
-                            {% if item.persent > 91 %}
-                            <span class="text-success">
-                                {{ item.persent|floatformat:2 }}%
-                            </span>
-                            {% elif item.persent < 90 %}
-                            <span class="text-danger">
-                                {{ item.persent|floatformat:2 }}%
-                            </span>
+                            <strong>{{ item.total_hours|floatformat:1 }}</strong>
+                            <span class="text-muted">({{ item.norm_hours|floatformat:1 }})</span>
+                        </td>
+                        <td class="text-center">
+                            {% if item.persent > 0 %}
+                                {% if item.persent >= 100 %}
+                                    <span class="badge bg-success">{{ item.persent|floatformat:0 }}%</span>
+                                {% elif item.persent >= 80 %}
+                                    <span class="badge bg-warning text-dark">{{ item.persent|floatformat:0 }}%</span>
+                                {% else %}
+                                    <span class="badge bg-danger">{{ item.persent|floatformat:0 }}%</span>
+                                {% endif %}
+                            {% else %}
+                                <span class="text-muted">—</span>
                             {% endif %}
-                        {% else %}
-                            <span class="text-muted">—</span>
-                        {% endif %}   
                         </td>
                         <td class="text-center">
                             {% if item.overtime > 0 %}
-                            <span class="badge bg-warning text-dark">
-                                +{{ item.overtime|floatformat:1 }}
-                            </span>
+                                <span class="badge bg-warning text-dark">
+                                    +{{ item.overtime|floatformat:1 }}
+                                </span>
                             {% else %}
-                            <span class="text-muted">—</span>
+                                <span class="text-muted">—</span>
                             {% endif %}
                         </td>
-                        <td class="text-center">
-                            {% if item.weekend_works > 0 %}
-                            <span class="badge bg-info text-white">
-                                {{ item.weekend_works }}
-                            </span>
+                        <!--<td class="text-center">
+                            {% if item.overtime_days > 0 %}
+                                <span class="badge bg-info text-white">
+                                    {{ item.overtime_days }}
+                                </span>
                             {% else %}
-                            <span class="text-muted">—</span>
+                                <span class="text-muted">—</span>
                             {% endif %}
+                        </td>-->
+                        <td class="text-center">
+                            <span class="badge {% if item.weekend_works > 0 %}bg-primary text-white{% else %}text-muted{% endif %}">
+                                {% if item.weekend_works > 0 %}
+                                    {{ item.weekend_works }}
+                                {% else %}
+                                    —
+                                {% endif %}
+                            </span>
                         </td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="9" class="text-center py-4">
+                        <td colspan="11" class="text-center py-4">
                             <p class="text-muted">Нет данных за выбранный период</p>
                         </td>
                     </tr>
                     {% endfor %}
                 </tbody>
-                <tfoot class="table-light fw-bold">
-                    <tr>
-                        <td colspan="4" class="text-end">Итого:</td>
-                        <td class="text-center">
-                            {{ report_data|sum_hours }} ч.
-                        </td>
-                        <td class="text-center">—</td>
-                        <td class="text-center">
-                            {{ report_data|sum_overtime }} ч.
-                        </td>
-                        <td class="text-center">
-                            {{ report_data|sum_weekend }} дн.
-                        </td>
-                        <td></td>
-                    </tr>
-                </tfoot>
             </table>
         </div>
     </div>

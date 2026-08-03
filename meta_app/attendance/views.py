@@ -1,5 +1,6 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
+from decimal import Decimal
 from django.contrib import messages
 from django.utils import timezone
 from datetime import datetime, timedelta
@@ -380,7 +381,6 @@ def attendance_calendar(request, year=None, month=None):
 @user_passes_test(is_manager)
 def report_employee_hours(request):
     """Отчет по отработанным часам сотрудников"""
-    from django.db.models import Sum, Count, Q
     from datetime import datetime
     from meta_app.workstations.models import Workstation
     from .models import MonthlyWorkNorm
@@ -395,23 +395,21 @@ def report_employee_hours(request):
     # Список участков для фильтра
     workstations = Workstation.objects.filter(is_active=True).order_by('name')
 
-    # Получаем сотрудников (QuerySet)
+    # Получаем сотрудников
     employees = Employee.objects.filter(
         is_active=True,
         is_superuser=False
     ).order_by('last_name', 'first_name')
 
-    # Фильтруем по дате увольнения (оставляем QuerySet)
+    # Фильтруем по дате увольнения
     active_employee_ids = []
     for emp in employees:
         if not emp.dismissal_date:
             active_employee_ids.append(emp.id)
         else:
-            # Показываем только если уволен в этом месяце или позже
             if emp.dismissal_date.year > year or (emp.dismissal_date.year == year and emp.dismissal_date.month >= month):
                 active_employee_ids.append(emp.id)
 
-    # Фильтруем QuerySet по ID (оставляем QuerySet)
     employees = Employee.objects.filter(id__in=active_employee_ids)
 
     # Фильтр по основному участку
@@ -435,54 +433,75 @@ def report_employee_hours(request):
     # Собираем данные по каждому сотруднику
     report_data = []
     for employee in employees:
-        # Записи за выбранный месяц
+        # Все записи за месяц (где был на работе)
         attendances = employee.attendances.filter(
             record_date__year=year,
             record_date__month=month,
             is_present=True
         )
 
-        # Всего отработанных часов
-        total_hours = sum([att.actual_hours for att in attendances])
+        # Разделяем на рабочие дни и выходные
+        work_attendances = attendances.filter(is_weekend_shift=False)
+        weekend_attendances = attendances.filter(is_weekend_shift=True)
 
-        # Количество рабочих дней
-        work_days = attendances.count()
-        
-        # Процент от нормы
+        # Количество дней
+        work_days = work_attendances.count()
+        weekend_works = weekend_attendances.count()
+        total_days = work_days + weekend_works
+
+        # Часы (рабочие и выходные)
+        work_hours = sum(
+            [att.actual_hours for att in work_attendances], Decimal('0'))
+        weekend_hours = sum(
+            [att.actual_hours for att in weekend_attendances], Decimal('0'))
+        total_hours = work_hours + weekend_hours
+
+        # Переработка ТОЛЬКО в рабочие дни (сверх нормы)
+        overtime = Decimal('0')
+        overtime_days = 0
+        for att in work_attendances:
+            day_norm = att.workstation.hours_per_day if att.workstation else Decimal(
+                '8.0')
+            if att.actual_hours > day_norm:
+                overtime += att.actual_hours - day_norm
+                overtime_days += 1
+
+        # Процент от нормы (от общих часов, включая выходные)
         if hours_norm > 0 and total_hours > 0:
-            persent = total_hours / hours_norm * 100
+            persent = float(total_hours) / float(hours_norm) * 100
         else:
             persent = 0
-        
-        # Переработка (часы сверх нормы)
-        overtime = max(0, total_hours - hours_norm)
 
-        # Выходы в выходные дни
-        weekend_works = attendances.filter(is_weekend_shift=True).count()
-
-        # Получаем ОСНОВНОЙ участок
+        # Основной участок
         primary_workstation = employee.workstation_assignments.filter(
             is_primary=True).first()
         workstation_name = primary_workstation.workstation.name if primary_workstation else '—'
 
-        # Среднее часов в день
-        avg_hours = total_hours / work_days if work_days > 0 else 0
+        # Среднее часов в рабочий день
+        avg_hours = float(work_hours) / work_days if work_days > 0 else 0
 
         report_data.append({
             'employee': employee,
             'workstation': workstation_name,
-            'work_days': work_days,
-            'total_hours': total_hours,
-            'norm_hours': hours_norm,
-            'overtime': overtime,
-            'weekend_works': weekend_works,
+            'work_days': work_days,                    # только рабочие дни
+            'weekend_works': weekend_works,            # количество выходных дней
+            'total_days': total_days,                  # всего дней
+            'work_hours': float(work_hours),           # часы в рабочие дни
+            'weekend_hours': float(weekend_hours),     # часы в выходные
+            # всего часов (рабочие + выходные)
+            'total_hours': float(total_hours),
+            'norm_hours': float(hours_norm),           # норма за месяц
+            # переработка (только рабочие дни)
+            'overtime': float(overtime),
+            'overtime_days': overtime_days,            # дни с переработкой
             'avg_hours': avg_hours,
             'attendances': attendances,
+            # % от нормы (от общих часов)
             'persent': persent,
         })
 
-    # Сортируем: сначала переработка (убывание)
-    report_data.sort(key=lambda x: x['overtime'], reverse=True)
+    # Сортируем по фамилии сотрудника
+    report_data.sort(key=lambda x: x['employee'].last_name)
 
     return render(request, 'attendance/report_hours.html', {
         'report_data': report_data,
@@ -492,7 +511,7 @@ def report_employee_hours(request):
                        'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'][month - 1],
         'workstations': workstations,
         'selected_workstation': workstation_id,
-        'hours_norm': hours_norm,
+        'hours_norm': float(hours_norm),
         'current_year': today.year,
         'current_month': today.month,
     })
