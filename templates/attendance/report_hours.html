@@ -125,30 +125,26 @@
                         <td class="text-center">{{ item.work_days }}</td>
                         <td class="text-center">
                             <strong>
-                                {{ item.total_hours|floatformat:1 }}
+                                {{ item.total_hours|floatformat:1 }}ч.
                             </strong>
                             <span class="text-muted">
-                                ({{ item.norm_hours|floatformat:1 }})ч.
+                                ({{ item.norm_hours|floatformat:1 }})
                             </span>
                         </td>
                         <td class="text-center">
                         {% if item.total_hours > 0 %}
-                            {% if item.persent < 100 and items.persent > 81 %}
-                            <strong class="text-success">
+                            {% if item.persent > 91 %}
+                            <span class="text-success">
                                 {{ item.persent|floatformat:2 }}%
-                            </strong>
-                            {% elif item.persetn < 80 and item.persent > 51 %}
-                            <strong class="text-warning">
+                            </span>
+                            {% elif item.persent < 90 %}
+                            <span class="text-danger">
                                 {{ item.persent|floatformat:2 }}%
-                            </strong>
-                            {% elif item.persent < 50 %}
-                            <strong class="text-danger">
-                                {{ item.persent|floatformat:2 }}%
-                            </strong>
+                            </span>
                             {% endif %}
                         {% else %}
-                            <span class="text-muted">-</span>
-                        {% endif %}
+                            <span class="text-muted">—</span>
+                        {% endif %}   
                         </td>
                         <td class="text-center">
                             {% if item.overtime > 0 %}
