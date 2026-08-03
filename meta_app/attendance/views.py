@@ -447,7 +447,13 @@ def report_employee_hours(request):
 
         # Количество рабочих дней
         work_days = attendances.count()
-
+        
+        # Процент от нормы
+        if hours_norm > 0 and total_hours > 0:
+            persent = total_hours / hours_norm * 100
+        else:
+            persent = 0
+        
         # Переработка (часы сверх нормы)
         overtime = max(0, total_hours - hours_norm)
 
@@ -472,6 +478,7 @@ def report_employee_hours(request):
             'weekend_works': weekend_works,
             'avg_hours': avg_hours,
             'attendances': attendances,
+            'persent': persent,
         })
 
     # Сортируем: сначала переработка (убывание)

@@ -212,9 +212,13 @@ function loadMessages(chatId, append = false) {
                 return;
             }
             
-            const messages = data.messages.reverse();
+            // ✅ Правильный способ: создаем копию и переворачиваем её
+            // Используем slice() чтобы не мутировать исходный массив
+            const messages = data.messages.slice();
+            
             let html = '';
             
+            // Если есть старые сообщения и мы добавляем их (append)
             if (hasMoreMessages && append) {
                 html += `
                     <div class="text-center py-2">
@@ -225,6 +229,7 @@ function loadMessages(chatId, append = false) {
                 `;
             }
             
+            // Формируем сообщения (старые сверху, новые снизу)
             messages.forEach(msg => {
                 const isMine = msg.employee_id === window.userId;
                 html += `
@@ -239,9 +244,12 @@ function loadMessages(chatId, append = false) {
             });
             
             if (append) {
+                // Добавляем старые сообщения в начало
                 messagesContainer.innerHTML = html + messagesContainer.innerHTML;
             } else {
+                // Первая загрузка — просто вставляем все сообщения
                 messagesContainer.innerHTML = html;
+                // Скроллим вниз к последнему сообщению
                 setTimeout(() => {
                     messagesContainer.scrollTop = messagesContainer.scrollHeight;
                 }, 100);

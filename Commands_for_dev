@@ -1,0 +1,34 @@
+Запустить локальный сервер с daphny
+    $env:DJANGO_SETTINGS_MODULE="config.settings"; daphne -p 8000 config.asgi:application
+
+Собрать статику
+    python manage.py collectstatic --noinput  
+
+=== НА СЕРВЕРЕ ===
+
+git pull origin master - получить обновления из репозитория
+docker compose down - отключить контейнер
+docker compose up -d -build - Пересобрать и запустить контейнер
+
+
+=== MANAGE.PY SHELL ===
+Поменять пароль
+    user = Employee.objects.get(username='admin')  # или другой логин
+
+    # Установить новый пароль
+    user.set_password('новый_пароль')
+    user.save()
+
+    print(f"Пароль для {user.full_name} изменен!")
+    exit()
+
+
+=== BACKUP ===
+📌 Шпаргалка для восстановления
+
+COPY	
+    cat backups/*_copy.sql | docker exec -i metaadmin-db psql -U metaadmin_user -d metaadmin_db
+Custom	
+    docker exec -i metaadmin-db pg_restore -U metaadmin_user -d metaadmin_db < backups/*_custom.dump
+Сжатый
+    gunzip -c backups/*.sql.gz | docker exec -i metaadmin-db psql -U metaadmin_user -d metaadmin_db

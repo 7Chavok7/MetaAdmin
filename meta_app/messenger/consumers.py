@@ -50,6 +50,9 @@ class ChatConsumer(AsyncWebsocketConsumer):
 
         message = await self.save_message(message_text)
 
+        # ✅ Преобразуем время в локальное
+        local_time = timezone.localtime(message.created_at)
+
         await self.channel_layer.group_send(
             self.room_group_name,
             {
@@ -58,7 +61,7 @@ class ChatConsumer(AsyncWebsocketConsumer):
                 'employee_id': self.user.id,
                 'employee_full_name': self.user.full_name,
                 'message': message.message,
-                'created_at': message.created_at.strftime('%H:%M'),
+                'created_at': local_time.strftime('%H:%M'),  # ← локальное время
             }
         )
 

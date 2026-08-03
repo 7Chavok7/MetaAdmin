@@ -105,7 +105,7 @@
                         <th>Участок</th>
                         <th class="text-center">Дней</th>
                         <th class="text-center">Отработано</th>
-                        <th class="text-center">Норма</th>
+                        <th class="text-center">% от нормы</th>
                         <th class="text-center">Переработка</th>
                         <th class="text-center">Выходные</th>
                         {% comment %} <th class="text-center">Среднее в день</th> {% endcomment %}
@@ -118,15 +118,38 @@
                         <td>
                             <a href="{% url 'dashboard:employee_detail' item.employee.id %}" 
                                style="color: #212529; text-decoration: none; font-weight: 500;">
-                                {{ item.employee.full_name }}
+                                {{ item.employee.short_name }}
                             </a>
                         </td>
                         <td>{{ item.workstation }}</td>
                         <td class="text-center">{{ item.work_days }}</td>
                         <td class="text-center">
-                            <strong>{{ item.total_hours|floatformat:1 }}</strong> ч.
+                            <strong>
+                                {{ item.total_hours|floatformat:1 }}
+                            </strong>
+                            <span class="text-muted">
+                                ({{ item.norm_hours|floatformat:1 }})ч.
+                            </span>
                         </td>
-                        <td class="text-center text-muted">{{ item.norm_hours|floatformat:1 }}</td>
+                        <td class="text-center">
+                        {% if item.total_hours > 0 %}
+                            {% if item.persent < 100 and items.persent > 81 %}
+                            <strong class="text-success">
+                                {{ item.persent|floatformat:2 }}%
+                            </strong>
+                            {% elif item.persetn < 80 and item.persent > 51 %}
+                            <strong class="text-warning">
+                                {{ item.persent|floatformat:2 }}%
+                            </strong>
+                            {% elif item.persent < 50 %}
+                            <strong class="text-danger">
+                                {{ item.persent|floatformat:2 }}%
+                            </strong>
+                            {% endif %}
+                        {% else %}
+                            <span class="text-muted">-</span>
+                        {% endif %}
+                        </td>
                         <td class="text-center">
                             {% if item.overtime > 0 %}
                             <span class="badge bg-warning text-dark">
@@ -145,7 +168,6 @@
                             <span class="text-muted">—</span>
                             {% endif %}
                         </td>
-                        {% comment %} <td class="text-center">{{ item.avg_hours|floatformat:1 }}</td> {% endcomment %}
                     </tr>
                     {% empty %}
                     <tr>

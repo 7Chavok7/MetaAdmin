@@ -1,6 +1,7 @@
 from django.shortcuts import render, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
+from django.utils import timezone
 from django.http import JsonResponse
 from .models import Chat
 from meta_app.employees.models import Employee
@@ -55,12 +56,15 @@ def get_messages(request, chat_id):
 
         data = []
         for msg in page_obj:
+            # ✅ Преобразуем UTC в локальное время (Europe/Moscow)
+            local_time = timezone.localtime(msg.created_at)
+
             data.append({
                 'id': msg.id,
                 'employee_id': msg.employee.id,
                 'employee_name': msg.employee.full_name,
                 'message': msg.message,
-                'created_at': msg.created_at.strftime('%H:%M %d.%m.%Y'),
+                'created_at': local_time.strftime('%H:%M %d.%m.%Y'),
                 'is_read': msg.is_read,
             })
 

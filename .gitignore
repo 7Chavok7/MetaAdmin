@@ -23,3 +23,9 @@ Thumbs.db
 *.pyc
 __pycache__/
 .env
+
+# Настройки Django (локальные)
+config/settings.py
+config/settings_local.py
+config/secrets.py
+.env
