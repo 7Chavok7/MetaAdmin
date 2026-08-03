@@ -757,7 +757,7 @@ def vacation_process(request, vacation_id):
             
             if vacation.status == 'approved':
                 from .models import DailyAttendance
-                for date in vacation.get_date():
+                for date in vacation.get_dates():
                     DailyAttendance.objects.get_or_create(
                         employee=vacation.employee,
                         record_date=date,
