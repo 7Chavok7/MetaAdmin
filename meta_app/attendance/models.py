@@ -68,6 +68,12 @@ class DailyAttendance(models.Model):
         default=0.0,
         verbose_name='Переработка (часов)'
     )
+    base_hours = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0.0,
+        verbose_name='Базовые часы (без переработки)'
+    )
     actual_hours = models.DecimalField(
         max_digits=5,
         decimal_places=2,
@@ -127,7 +133,7 @@ class DailyAttendance(models.Model):
         else:
             self.is_present = True
 
-        # 2. Рассчитываем часы
+        # 2. Рассчитываем БАЗОВЫЕ часы (без переработки)
         if self.is_present and self.start_time and self.end_time:
             start = self.start_time
             end = self.end_time
@@ -140,12 +146,18 @@ class DailyAttendance(models.Model):
 
             diff_minutes = end_minutes - start_minutes
 
+            # Вычитаем обед (если больше 6 часов)
             if diff_minutes > 6 * 60:
                 diff_minutes -= 60
 
-            hours = diff_minutes / 60
-            self.actual_hours = round(hours, 2) + float(self.overtime_hours or 0)
+            # Базовые часы (без переработки)
+            base_hours = round(diff_minutes / 60, 2)
+            self.base_hours = base_hours
+
+            # Фактические часы = базовые + переработка
+            self.actual_hours = base_hours + float(self.overtime_hours or 0)
         else:
+            self.base_hours = 0
             self.actual_hours = 0
 
         super().save(*args, **kwargs)

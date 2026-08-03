@@ -387,15 +387,12 @@ def report_employee_hours(request):
 
     today = timezone.now().date()
 
-    # Параметры фильтрации
     year = int(request.GET.get('year', today.year))
     month = int(request.GET.get('month', today.month))
     workstation_id = request.GET.get('workstation')
 
-    # Список участков для фильтра
     workstations = Workstation.objects.filter(is_active=True).order_by('name')
 
-    # Получаем сотрудников
     employees = Employee.objects.filter(
         is_active=True,
         is_superuser=False
@@ -412,7 +409,6 @@ def report_employee_hours(request):
 
     employees = Employee.objects.filter(id__in=active_employee_ids)
 
-    # Фильтр по основному участку
     if workstation_id and workstation_id != 'all':
         try:
             ws = Workstation.objects.get(id=workstation_id)
@@ -423,14 +419,12 @@ def report_employee_hours(request):
         except Workstation.DoesNotExist:
             pass
 
-    # Получаем норму часов за месяц
     try:
         norm = MonthlyWorkNorm.objects.get(year=year, month=month)
         hours_norm = norm.hours_norm
     except MonthlyWorkNorm.DoesNotExist:
         hours_norm = 0
 
-    # Собираем данные по каждому сотруднику
     report_data = []
     for employee in employees:
         # Все записи за месяц (где был на работе)
@@ -440,67 +434,69 @@ def report_employee_hours(request):
             is_present=True
         )
 
-        # Разделяем на рабочие дни и выходные
+        # Разделяем на рабочие дни и выходные по is_weekend_shift
         work_attendances = attendances.filter(is_weekend_shift=False)
         weekend_attendances = attendances.filter(is_weekend_shift=True)
 
-        # Количество дней
         work_days = work_attendances.count()
         weekend_works = weekend_attendances.count()
         total_days = work_days + weekend_works
 
-        # Часы (рабочие и выходные)
-        work_hours = sum(
-            [att.actual_hours for att in work_attendances], Decimal('0'))
-        weekend_hours = sum(
-            [att.actual_hours for att in weekend_attendances], Decimal('0'))
-        total_hours = work_hours + weekend_hours
+        # Базовые часы (без переработки)
+        work_base_hours = sum(
+            [att.base_hours for att in work_attendances], Decimal('0'))
+        weekend_base_hours = sum(
+            [att.base_hours for att in weekend_attendances], Decimal('0'))
 
-        # Переработка ТОЛЬКО в рабочие дни (сверх нормы)
-        overtime = Decimal('0')
-        overtime_days = 0
-        for att in work_attendances:
-            day_norm = att.workstation.hours_per_day if att.workstation else Decimal(
-                '8.0')
-            if att.actual_hours > day_norm:
-                overtime += att.actual_hours - day_norm
-                overtime_days += 1
+        # Переработка (отдельно)
+        work_overtime = sum(
+            [att.overtime_hours for att in work_attendances], Decimal('0'))
+        weekend_overtime = sum(
+            [att.overtime_hours for att in weekend_attendances], Decimal('0'))
 
-        # Процент от нормы (от общих часов, включая выходные)
-        if hours_norm > 0 and total_hours > 0:
-            persent = float(total_hours) / float(hours_norm) * 100
-        else:
-            persent = 0
+        # Всего часов = базовые + переработка
+        total_work_hours = work_base_hours + work_overtime
+        total_weekend_hours = weekend_base_hours + weekend_overtime
+        total_hours = total_work_hours + total_weekend_hours
 
-        # Основной участок
+        # Всего переработки
+        overtime = work_overtime + weekend_overtime
+        overtime_days = work_attendances.filter(overtime_hours__gt=0).count(
+        ) + weekend_attendances.filter(overtime_hours__gt=0).count()
+
+        # Получаем ОСНОВНОЙ участок
         primary_workstation = employee.workstation_assignments.filter(
             is_primary=True).first()
         workstation_name = primary_workstation.workstation.name if primary_workstation else '—'
 
-        # Среднее часов в рабочий день
-        avg_hours = float(work_hours) / work_days if work_days > 0 else 0
+        # Процент от нормы (только базовые часы в рабочие дни)
+        if hours_norm > 0 and work_base_hours > 0:
+            persent = float(work_base_hours) / float(hours_norm) * 100
+        else:
+            persent = 0
+
+        # Среднее часов в рабочий день (базовые)
+        avg_hours = float(work_base_hours) / work_days if work_days > 0 else 0
 
         report_data.append({
             'employee': employee,
-            'workstation': workstation_name,
-            'work_days': work_days,                    # только рабочие дни
-            'weekend_works': weekend_works,            # количество выходных дней
-            'total_days': total_days,                  # всего дней
-            'work_hours': float(work_hours),           # часы в рабочие дни
-            'weekend_hours': float(weekend_hours),     # часы в выходные
-            # всего часов (рабочие + выходные)
+            'workstation': workstation_name,           # ← ДОБАВЛЕНО!
+            'work_days': work_days,
+            'weekend_works': weekend_works,
+            'total_days': total_days,
+            'work_base_hours': float(work_base_hours),
+            'work_overtime': float(work_overtime),
+            'weekend_base_hours': float(weekend_base_hours),
+            'weekend_overtime': float(weekend_overtime),
             'total_hours': float(total_hours),
-            'norm_hours': float(hours_norm),           # норма за месяц
-            # переработка (только рабочие дни)
+            'norm_hours': float(hours_norm),
             'overtime': float(overtime),
-            'overtime_days': overtime_days,            # дни с переработкой
+            'overtime_days': overtime_days,
             'avg_hours': avg_hours,
             'attendances': attendances,
-            # % от нормы (от общих часов)
             'persent': persent,
         })
 
-    # Сортируем по фамилии сотрудника
     report_data.sort(key=lambda x: x['employee'].last_name)
 
     return render(request, 'attendance/report_hours.html', {

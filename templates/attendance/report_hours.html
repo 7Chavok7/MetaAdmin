@@ -98,81 +98,92 @@
                         <th>#</th>
                         <th style="min-width: 150px;">Сотрудник</th>
                         <th>Участок</th>
-                        <th class="text-center">Дней (раб.)</th>
+                        <th class="text-center">Дней</th>
                         <th class="text-center">Часы (раб.)</th>
-                        <th class="text-center">Часы (вых.)</th>
-                        <th class="text-center">Всего часов</th>
+                        <!--<th class="text-center">Перераб.</th>-->
+                        <!--<th class="text-center">Перераб.</th>-->
+                        <!--<th class="text-center">Всего часов</th>-->
                         <th class="text-center">% от нормы</th>
                         <th class="text-center">Переработка</th>
-                        <!--<th class="text-center">Дней с пер.</th>-->
-                        <th class="text-center">Выходные дни</th>
+                        <!--<th class="text-center">Дней с перераб.</th>-->
+                        <th class="text-center">Часы (вых.)</th>
+                        <th class="text-center">Выходные</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for item in report_data %}
                     <tr>
                         <td>{{ forloop.counter }}</td>
+                        <!--ФИО-->
                         <td>
                             <a href="{% url 'dashboard:employee_detail' item.employee.id %}" 
-                               style="color: #212529; text-decoration: none; font-weight: 500;">
+                            style="color: #212529; text-decoration: none; font-weight: 500;">
                                 {{ item.employee.short_name }}
                             </a>
                         </td>
+                        <!--Участок-->
                         <td>{{ item.workstation }}</td>
+                        <!--Всего дней-->
                         <td class="text-center">{{ item.work_days }}</td>
-                        <td class="text-center">{{ item.work_hours|floatformat:1 }}</td>
-                        <td class="text-center">
-                            <span class="text-muted">{{ item.weekend_hours|floatformat:1 }}</span>
-                        </td>
-                        <td class="text-center">
-                            <strong>{{ item.total_hours|floatformat:1 }}</strong>
-                            <span class="text-muted">({{ item.norm_hours|floatformat:1 }})</span>
-                        </td>
-                        <td class="text-center">
-                            {% if item.persent > 0 %}
-                                {% if item.persent >= 100 %}
-                                    <span class="badge bg-success">{{ item.persent|floatformat:0 }}%</span>
-                                {% elif item.persent >= 80 %}
-                                    <span class="badge bg-warning text-dark">{{ item.persent|floatformat:0 }}%</span>
-                                {% else %}
-                                    <span class="badge bg-danger">{{ item.persent|floatformat:0 }}%</span>
-                                {% endif %}
-                            {% else %}
-                                <span class="text-muted">—</span>
-                            {% endif %}
-                        </td>
-                        <td class="text-center">
-                            {% if item.overtime > 0 %}
-                                <span class="badge bg-warning text-dark">
-                                    +{{ item.overtime|floatformat:1 }}
-                                </span>
-                            {% else %}
-                                <span class="text-muted">—</span>
-                            {% endif %}
-                        </td>
+                        <!--Рабочие часы-->
+                        <td class="text-center">{{ item.work_base_hours|floatformat:1 }}</td>
+                        <!--Переработка в рабочие дни-->
                         <!--<td class="text-center">
-                            {% if item.overtime_days > 0 %}
-                                <span class="badge bg-info text-white">
-                                    {{ item.overtime_days }}
-                                </span>
+                            {% if item.work_overtime > 0 %}
+                                <span class="badge bg-warning text-dark">{{ item.work_overtime|floatformat:1 }}</span>
                             {% else %}
                                 <span class="text-muted">—</span>
                             {% endif %}
                         </td>-->
+                        <!--Переработка в выходные-->
+                        <!--<td class="text-center">
+                            {% if item.weekend_overtime > 0 %}
+                            <span class="badge bg-warning text-dark">{{ item.weekend_overtime|floatformat:1 }}</span>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>-->
+                        <!--Всего часов-->
+                        <!--<td class="text-center">
+                            <strong>{{ item.total_hours|floatformat:1 }}</strong>
+                            <span class="text-muted">({{ item.norm_hours|floatformat:1 }})</span>
+                        </td>-->
+                        <!--Процент от нормы-->
                         <td class="text-center">
-                            <span class="badge {% if item.weekend_works > 0 %}bg-primary text-white{% else %}text-muted{% endif %}">
-                                {% if item.weekend_works > 0 %}
-                                    {{ item.weekend_works }}
+                            {% if item.persent > 0 %}
+                            {% if item.persent >= 100 %}
+                            <span class="badge bg-success">{{ item.persent|floatformat:0 }}%</span>
+                                {% elif item.persent >= 80 %}
+                                    <span class="badge bg-warning text-dark">{{ item.persent|floatformat:0 }}%</span>
                                 {% else %}
-                                    —
+                                <span class="badge bg-danger">{{ item.persent|floatformat:0 }}%</span>
                                 {% endif %}
-                            </span>
+                                {% else %}
+                                <span class="text-muted">—</span>
+                                {% endif %}
                         </td>
-                    </tr>
-                    {% empty %}
-                    <tr>
-                        <td colspan="11" class="text-center py-4">
-                            <p class="text-muted">Нет данных за выбранный период</p>
+                        <td class="text-center">
+                            {% if item.overtime > 0 %}
+                            <span class="badge bg-warning text-dark">+{{ item.overtime|floatformat:1 }}</span>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <!--<td class="text-center">
+                            {% if item.overtime_days > 0 %}
+                            <span class="badge bg-info text-white">{{ item.overtime_days }}</span>
+                            {% else %}
+                            <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>-->
+                        <!--Отработанные часы в выходной-->
+                        <td class="text-center">{{ item.weekend_base_hours|floatformat:1 }}</td>
+                        <td class="text-center">
+                            {% if item.weekend_works > 0 %}
+                                <span class="badge bg-primary text-white">{{ item.weekend_works }}</span>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
