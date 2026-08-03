@@ -10,8 +10,45 @@ git pull origin master - получить обновления из репози
 docker compose down - отключить контейнер
 docker compose up -d -build - Пересобрать и запустить контейнер
 
+# Запустить все контейнеры в фоновом режиме
+docker-compose up -d
+
+# Запустить с пересборкой образов
+docker-compose up -d --build
+
+# Запустить и смотреть логи в реальном времени
+docker-compose up
+
+# Остановить все контейнеры
+docker-compose down
+
+# Остановить и удалить все контейнеры, сети и тома
+docker-compose down -v
+
+# Создать миграции
+docker-compose exec web python manage.py makemigrations
+
+# Создать миграции для конкретного приложения
+docker-compose exec web python manage.py makemigrations attendance
+
+# Применить миграции
+docker-compose exec web python manage.py migrate
+
+# Применить миграции для конкретного приложения
+docker-compose exec web python manage.py migrate attendance
+
+# Посмотреть план миграций (что будет применено)
+docker-compose exec web python manage.py migrate --plan
+
+# Посмотреть статус миграций
+docker-compose exec web python manage.py showmigrations
+
+# Откатить последнюю миграцию
+docker-compose exec web python manage.py migrate attendance 0003
+
 
 === MANAGE.PY SHELL ===
+
 Поменять пароль
     user = Employee.objects.get(username='admin')  # или другой логин
 
