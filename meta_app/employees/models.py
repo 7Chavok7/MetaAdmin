@@ -79,7 +79,12 @@ class Employee(AbstractUser):
         verbose_name='Номер карточки'
     )
     
-    
+    base_salary = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.0,
+        verbose_name='Базовый оклад (руб.)'
+    )
 
     is_active = models.BooleanField(
         default=True,

@@ -69,3 +69,17 @@ Custom
     docker exec -i metaadmin-db pg_restore -U metaadmin_user -d metaadmin_db < backups/*_custom.dump
 Сжатый
     gunzip -c backups/*.sql.gz | docker exec -i metaadmin-db psql -U metaadmin_user -d metaadmin_db
+
+
+=== Слияние веток git ===
+# 1. Переключиться на master
+git checkout master
+
+# 2. Забрать последние изменения с GitHub
+git pull origin master
+
+# 3. Влить ветку feature/kpi в master
+git merge feature/kpi
+
+# 4. Отправить master на GitHub
+git push origin master

@@ -24,7 +24,7 @@ class VacationRequestAdmin(admin.ModelAdmin):
         'processed_by',   
     ]
     readonly_fields = [
-        'staus',
+        'status',
         'processed_at',
         'created_at',
         'updated_at'
