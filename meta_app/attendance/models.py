@@ -255,3 +255,62 @@ class VacationRequest(models.Model):
             dates.append(current)
             current += TD(days=1)
         return dates
+    
+    
+class KPI(models.Model):
+    """Справочник KPI — просто и понятно"""
+    
+    # 🔥 Упрощенные типы KPI
+    TYPE_CHOICES = [
+        ('no_absence', 'Нет пропусков (любых)'),
+        ('has_skills', 'Есть навыки'),
+        ('overtime', 'Была переработка'),
+        ('clean_workplace', 'Чистое рабочее место'),
+        ('custom', 'Свой вариант'),
+    ]
+    
+    name = models.CharField(
+        max_length=255,
+        verbose_name='Название KPI'
+    )
+    type = models.CharField(
+        max_length=50,
+        choices=TYPE_CHOICES,
+        default='custom',
+        verbose_name='Тип KPI'
+    )
+    
+    # Настройка бонуса
+    bonus_amount = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.0,
+        verbose_name='Бонус (руб.)'
+    )
+    bonus_percent = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        default=0.0,
+        verbose_name='Бонус (%) от оклада'
+    )
+    
+    # Для KPI "Есть навыки"
+    skill_price = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.0,
+        verbose_name='Цена за навык (руб.)'
+    )
+    
+    # Статус
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='Активен'
+    )
+    
+    class Meta:
+        verbose_name = 'KPI'
+        verbose_name_plural = 'Показатели KPI'
+    
+    def __str__(self):
+        return f"{self.name} ({'✅' if self.is_active else '❌'})"
