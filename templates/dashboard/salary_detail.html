@@ -1,0 +1,461 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Детальный расчёт зарплаты - MetaAdmin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .salary-summary {
+        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 20px;
+    }
+    .salary-summary .amount {
+        font-size: 28px;
+        font-weight: 700;
+        color: #0d6efd;
+    }
+    .salary-summary .label {
+        font-size: 14px;
+        color: #6c757d;
+    }
+    .kpi-completed {
+        color: #28a745;
+    }
+    .kpi-failed {
+        color: #dc3545;
+    }
+    .kpi-card {
+        transition: transform 0.2s;
+        border-left: 4px solid #0d6efd;
+    }
+    .kpi-card:hover {
+        transform: translateX(5px);
+    }
+    .kpi-card.completed {
+        border-left-color: #28a745;
+        background: #f0fff4;
+    }
+    .kpi-card.failed {
+        border-left-color: #dc3545;
+        background: #fff5f5;
+    }
+    
+    /* ===== КАЛЕНДАРЬ ===== */
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+        max-width: 100%;
+    }
+    .calendar-day {
+        aspect-ratio: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.2s;
+        position: relative;
+        width: 100%;
+        max-width: 42px;
+        margin: 0 auto;
+        cursor: default;
+    }
+    .calendar-day .day-number {
+        font-size: 14px;
+        font-weight: 600;
+        line-height: 1;
+    }
+    .calendar-day .day-hours {
+        font-size: 8px;
+        opacity: 0.8;
+        margin-top: 1px;
+        line-height: 1;
+    }
+    .calendar-day.present {
+        background: #d4edda;
+        color: #155724;
+        border: 2px solid #28a745;
+    }
+    .calendar-day.absent {
+        background: #f8d7da;
+        color: #721c24;
+        border: 2px solid #dc3545;
+    }
+    .calendar-day.weekend-work {
+        background: #fff3cd;
+        color: #856404;
+        border: 2px solid #ffc107;
+    }
+    .calendar-day.vacation {
+        background: #cce5ff;
+        color: #004085;
+        border: 2px solid #0d6efd;
+    }
+    .calendar-day.sick {
+        background: #e2e3e5;
+        color: #383d41;
+        border: 2px solid #6c757d;
+    }
+    .calendar-day.weekend {
+        background: #f8f9fa;
+        color: #adb5bd;
+        border: 2px solid #dee2e6;
+    }
+    .calendar-day.no-record {
+        background: #ffffff;
+        color: #dc3545;
+        border: 2px dashed #dc3545;
+        position: relative;
+    }
+    .calendar-day.no-record::after {
+        content: '✕';
+        position: absolute;
+        font-size: 16px;
+        color: #dc3545;
+        opacity: 0.6;
+    }
+    .calendar-day .day-number {
+        z-index: 1;
+        position: relative;
+    }
+    .calendar-day.today {
+        box-shadow: 0 0 0 3px #0d6efd;
+        z-index: 2;
+    }
+    .calendar-header {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 4px;
+        margin-bottom: 8px;
+        text-align: center;
+        font-weight: 600;
+        font-size: 12px;
+        color: #6c757d;
+    }
+    .calendar-header span {
+        padding: 4px 0;
+    }
+    .calendar-header .weekend-header {
+        color: #dc3545;
+    }
+    .calendar-legend {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        justify-content: center;
+        margin-top: 12px;
+        padding-top: 12px;
+        border-top: 1px solid #dee2e6;
+    }
+    .calendar-legend .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 12px;
+    }
+    .calendar-legend .legend-color {
+        width: 16px;
+        height: 16px;
+        border-radius: 50%;
+        border: 1px solid #dee2e6;
+    }
+    .detail-card {
+        border-radius: 12px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        transition: box-shadow 0.2s;
+    }
+    .detail-card:hover {
+        box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+    }
+    .back-link {
+        transition: transform 0.2s;
+    }
+    .back-link:hover {
+        transform: translateX(-3px);
+    }
+    .kpi-detail-table {
+        font-size: 13px;
+    }
+    .kpi-detail-table th {
+        background: #f8f9fa;
+        font-weight: 600;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="mb-3">
+    <a href="{% url 'dashboard:salary_table' %}?year={{ year }}" class="btn btn-outline-secondary back-link">
+        <i class="bi bi-arrow-left"></i> Назад к таблице
+    </a>
+</div>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="bi bi-person-circle text-primary"></i>
+        {{ employee.full_name }}
+        <small class="text-muted h5">{{ month_name }} {{ year }}</small>
+    </h1>
+    <div>
+        <span class="badge bg-secondary">Таб. №{{ employee.employee_id }}</span>
+        {% if employee.department %}
+        <span class="badge bg-info">{{ employee.department.name }}</span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Итоговая сумма -->
+<div class="salary-summary">
+    <div class="row text-center">
+        <div class="col-md-3">
+            <div class="label">Базовый оклад</div>
+            <div class="amount text-primary">
+                {{ salary_record.base_salary|floatformat:0|default:"0" }} ₽
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="label">Бонус по KPI</div>
+            <div class="amount text-success">
+                +{{ salary_record.kpi_bonus|floatformat:0|default:"0" }} ₽
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="label">Итого</div>
+            <div class="amount text-dark">
+                {{ salary_record.total_salary|floatformat:0|default:"0" }} ₽
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="label">Статус расчёта</div>
+            <div>
+                {% if salary_record.is_calculated %}
+                <span class="badge bg-success">
+                    <i class="bi bi-check-circle"></i> Рассчитано
+                </span>
+                <br>
+                <small class="text-muted">
+                    {{ salary_record.calculated_at|date:"d.m.Y H:i" }}
+                </small>
+                {% else %}
+                <span class="badge bg-warning">Не рассчитано</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Левая колонка: KPI + Расшифровка -->
+    <div class="col-md-8">
+        <div class="card shadow-sm detail-card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-award"></i> Расчёт KPI</h5>
+            </div>
+            <div class="card-body">
+                {% if kpi_results %}
+                    <div class="row g-3">
+                        {% for item in kpi_results %}
+                        <div class="col-md-6">
+                            <div class="card kpi-card {% if item.completed %}completed{% else %}failed{% endif %}">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start">
+                                        <div>
+                                            <h6 class="card-title mb-1">
+                                                {{ item.kpi.name }}
+                                            </h6>
+                                            <small class="text-muted">{{ item.kpi.get_type_display }}</small>
+                                        </div>
+                                        <div class="text-end">
+                                            {% if item.completed %}
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-check-circle"></i> Выполнен
+                                            </span>
+                                            {% else %}
+                                            <span class="badge bg-danger">
+                                                <i class="bi bi-x-circle"></i> Не выполнен
+                                            </span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    <div class="mt-2">
+                                        <span class="fw-bold text-success">
+                                            +{{ item.bonus|floatformat:0 }} ₽
+                                        </span>
+                                        {% if item.kpi.bonus_amount > 0 %}
+                                        <small class="text-muted">
+                                            (фикс. {{ item.kpi.bonus_amount|floatformat:0 }} ₽)
+                                        </small>
+                                        {% endif %}
+                                        {% if item.kpi.bonus_percent > 0 %}
+                                        <small class="text-muted">
+                                            ({{ item.kpi.bonus_percent|floatformat:0 }}% от оклада)
+                                        </small>
+                                        {% endif %}
+                                        {% if item.kpi.skill_price > 0 %}
+                                        <small class="text-muted">
+                                            ({{ item.kpi.skill_price|floatformat:0 }} ₽/навык)
+                                        </small>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p class="text-muted">Нет активных KPI</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Расшифровка KPI (теперь под блоком KPI) -->
+        <div class="card shadow-sm detail-card mt-3">
+            <div class="card-header bg-light">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Расшифровка KPI</h5>
+            </div>
+            <div class="card-body p-0">
+                <div class="table-responsive">
+                    <table class="table table-sm kpi-detail-table mb-0">
+                        <thead>
+                            <tr>
+                                <th>KPI</th>
+                                <th>Тип</th>
+                                <th class="text-center">Статус</th>
+                                <th class="text-center">Бонус</th>
+                                <th class="text-center">Детали</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in kpi_results %}
+                            <tr>
+                                <td><strong>{{ item.kpi.name }}</strong></td>
+                                <td>{{ item.kpi.get_type_display }}</td>
+                                <td class="text-center">
+                                    {% if item.completed %}
+                                    <span class="text-success"><i class="bi bi-check-circle"></i></span>
+                                    {% else %}
+                                    <span class="text-danger"><i class="bi bi-x-circle"></i></span>
+                                    {% endif %}
+                                </td>
+                                <td class="text-center fw-bold text-success">
+                                    +{{ item.bonus|floatformat:0 }} ₽
+                                </td>
+                                <td class="text-center">
+                                    {% if item.kpi.bonus_amount > 0 %}
+                                        Фикс: {{ item.kpi.bonus_amount|floatformat:0 }} ₽
+                                    {% endif %}
+                                    {% if item.kpi.bonus_percent > 0 %}
+                                        {% if item.kpi.bonus_amount > 0 %}<br>{% endif %}
+                                        {{ item.kpi.bonus_percent|floatformat:0 }}% от оклада
+                                    {% endif %}
+                                    {% if item.kpi.skill_price > 0 %}
+                                        {% if item.kpi.bonus_amount > 0 or item.kpi.bonus_percent > 0 %}<br>{% endif %}
+                                        {{ item.kpi.skill_price|floatformat:0 }} ₽/навык
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% empty %}
+                            <tr>
+                                <td colspan="5" class="text-center text-muted py-3">Нет активных KPI</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Правая колонка: Статистика и Календарь -->
+    <div class="col-md-4">
+        <div class="card shadow-sm detail-card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0"><i class="bi bi-calendar3"></i> Календарь посещаемости</h5>
+            </div>
+            <div class="card-body">
+                <!-- Статистика -->
+                <div class="mb-3">
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Рабочих дней</span>
+                        <span class="fw-bold">{{ work_days }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Выходных дней</span>
+                        <span class="fw-bold">{{ weekend_days }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Всего дней</span>
+                        <span class="fw-bold">{{ total_days }}</span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <span class="text-muted">Отработано часов</span>
+                        <span class="fw-bold">{{ total_hours|floatformat:1 }}</span>
+                    </div>
+                </div>
+
+                <!-- Календарь -->
+                <div class="calendar-grid">
+                    {% for day in calendar_days %}
+                        <div class="calendar-day 
+                            {% if day.status == 'present' %}present
+                            {% elif day.status == 'absent' %}absent
+                            {% elif day.status == 'weekend_work' %}weekend-work
+                            {% elif day.status == 'vacation' %}vacation
+                            {% elif day.status == 'sick' %}sick
+                            {% elif day.status == 'weekend' %}weekend
+                            {% elif day.status == 'no_record' %}no-record
+                            {% endif %}
+                            {% if day.is_today %}today{% endif %}"
+                            title="{{ day.date|date:'d.m.Y' }}
+                            {% if day.hours > 0 %}: {{ day.hours|floatformat:1 }} ч.{% endif %}
+                            {% if day.status == 'no_record' %}: Нет записи{% endif %}">
+                            <span class="day-number">{{ day.day }}</span>
+                            {% if day.hours > 0 %}
+                            <span class="day-hours">{{ day.hours|floatformat:0 }}ч</span>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- Легенда -->
+                <div class="calendar-legend">
+                    <span class="legend-item">
+                        <span class="legend-color" style="background: #d4edda; border-color: #28a745;"></span>
+                        Присутствовал
+                    </span>
+                    <span class="legend-item">
+                        <span class="legend-color" style="background: #f8d7da; border-color: #dc3545;"></span>
+                        Отсутствовал
+                    </span>
+                    <span class="legend-item">
+                        <span class="legend-color" style="background: #fff3cd; border-color: #ffc107;"></span>
+                        Работа в выходной
+                    </span>
+                    <span class="legend-item">
+                        <span class="legend-color" style="background: #cce5ff; border-color: #0d6efd;"></span>
+                        Отпуск
+                    </span>
+                    <span class="legend-item">
+                        <span class="legend-color" style="background: #e2e3e5; border-color: #6c757d;"></span>
+                        Больничный
+                    </span>
+                    <span class="legend-item">
+                        <span class="legend-color" style="background: #ffffff; border: 2px dashed #dc3545;"></span>
+                        Нет записи
+                    </span>
+                    <span class="legend-item">
+                        <span class="legend-color" style="background: #f8f9fa; border-color: #dee2e6;"></span>
+                        Выходной
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

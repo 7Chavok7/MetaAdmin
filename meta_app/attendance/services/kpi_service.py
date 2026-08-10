@@ -1,10 +1,52 @@
 # meta_app/attendance/services/kpi_service.py
 
 from decimal import Decimal
-from meta_app.attendance.models import KPI, EmployeeKPIValue, DailyAttendance
+from django.utils import timezone
+from django.db.models import Q
+from meta_app.attendance.models import KPI, DailyAttendance, SalaryRecord
+import calendar
 
 
 class KPIService:
+    
+    @staticmethod
+    def get_workdays_in_month(employee, year, month):
+        """
+        Получить количество рабочих дней в месяце для сотрудника
+        Учитывает график работы сотрудника (5/2 или 2/2)
+        """
+        # Получаем основное подразделение сотрудника
+        primary_assignment = employee.workstation_assignments.filter(is_primary=True).first()
+        
+        if not primary_assignment:
+            # Если нет основного участка — считаем стандартные 5/2
+            workdays = 0
+            for day in range(1, calendar.monthrange(year, month)[1] + 1):
+                date = timezone.datetime(year, month, day).date()
+                if date.weekday() < 5:  # Пн-Пт
+                    workdays += 1
+            return workdays
+        
+        workstation = primary_assignment.workstation
+        schedule_type = workstation.schedule_type
+        
+        if schedule_type == '5_2':
+            # 5/2: считаем рабочие дни (Пн-Пт)
+            workdays = 0
+            for day in range(1, calendar.monthrange(year, month)[1] + 1):
+                date = timezone.datetime(year, month, day).date()
+                if date.weekday() < 5:
+                    workdays += 1
+            return workdays
+        
+        elif schedule_type == '2_2':
+            # 2/2: примерно половина дней
+            # TODO: более точная логика для 2/2
+            total_days = calendar.monthrange(year, month)[1]
+            return total_days // 2
+        
+        return 20  # По умолчанию
+    
     
     @staticmethod
     def calculate_kpi_for_employee(employee, year, month, kpi):
@@ -20,30 +62,61 @@ class KPIService:
             record_date__month=month
         )
         
-        # 🔥 Упрощенная логика
+        # ============================================
+        # KPI: Нет пропусков
+        # ============================================
         if kpi.type == 'no_absence':
-            # Нет пропусков ЛЮБОГО типа (прогул, больничный, отпуск)
-            has_absence = attendances.filter(
-                status__in=['absent', 'sick', 'vacation']
-            ).exists()
-            is_completed = not has_absence
+            # ✅ ПРАВИЛЬНАЯ ЛОГИКА:
+            # 1. Получаем количество рабочих дней в месяце
+            total_workdays = KPIService.get_workdays_in_month(employee, year, month)
             
+            # 2. Получаем количество дней, когда сотрудник присутствовал (статус 'present')
+            present_days = attendances.filter(status='present').count()
+            
+            # 3. Получаем количество дней с пропусками (absent, sick, vacation)
+            absence_days = attendances.filter(
+                status__in=['absent', 'sick', 'vacation']
+            ).count()
+            
+            # 4. KPI выполнен, если:
+            #    - присутствовал во все рабочие дни
+            #    - И нет ни одного дня с пропуском
+            #    - И количество рабочих дней > 0
+            is_completed = (
+                total_workdays > 0 and 
+                present_days == total_workdays and 
+                absence_days == 0
+            )
+            
+        # ============================================
+        # KPI: Есть навыки
+        # ============================================
         elif kpi.type == 'has_skills':
-            # Есть навыки
             skills = employee.employee_skills.select_related('skill').all()
             is_completed = skills.exists()
             
+        # ============================================
+        # KPI: Была переработка
+        # ============================================
         elif kpi.type == 'overtime':
-            # Была переработка
-            has_overtime = attendances.filter(overtime_hours__gt=0).exists()
+            # Проверяем, была ли переработка в любом рабочем дне
+            has_overtime = attendances.filter(
+                overtime_hours__gt=0,
+                status='present'
+            ).exists()
             is_completed = has_overtime
             
+        # ============================================
+        # KPI: Чистое рабочее место
+        # ============================================
         elif kpi.type == 'clean_workplace':
-            # Чистое рабочее место (пока заглушка)
+            # Пока заглушка
             is_completed = True
             
+        # ============================================
+        # Пользовательский KPI
+        # ============================================
         else:
-            # Пользовательский KPI
             is_completed = True
         
         # Рассчитываем бонус
@@ -63,3 +136,76 @@ class KPIService:
                 bonus += Decimal(str(kpi.skill_price)) * skills_count
         
         return is_completed, bonus
+    
+    @staticmethod
+    def calculate_all_kpis_for_month(employee, year, month):
+        """Рассчитать все KPI для сотрудника за месяц"""
+        
+        results = []
+        kpis = KPI.objects.filter(is_active=True)
+        
+        for kpi in kpis:
+            is_completed, bonus = KPIService.calculate_kpi_for_employee(
+                employee, year, month, kpi
+            )
+            
+            results.append({
+                'kpi': kpi,
+                'is_completed': is_completed,
+                'bonus': bonus,
+            })
+        
+        return results
+    
+    @staticmethod
+    def calculate_and_save_salary(employee, year, month, calculated_by=None):
+        """Рассчитать и сохранить зарплату сотрудника за месяц"""
+        
+        # Рассчитываем KPI
+        kpi_results = KPIService.calculate_all_kpis_for_month(employee, year, month)
+        
+        base_salary = Decimal(str(employee.base_salary or 0))
+        total_bonus = sum([Decimal(str(r['bonus'])) for r in kpi_results], Decimal('0'))
+        total_salary = base_salary + total_bonus
+        
+        # Детали KPI для отладки
+        kpi_details = {}
+        for r in kpi_results:
+            kpi_details[r['kpi'].name] = {
+                'completed': r['is_completed'],
+                'bonus': float(r['bonus'])
+            }
+        
+        # Сохраняем запись
+        salary_record, created = SalaryRecord.objects.update_or_create(
+            employee=employee,
+            year=year,
+            month=month,
+            defaults={
+                'base_salary': base_salary,
+                'kpi_bonus': total_bonus,
+                'total_salary': total_salary,
+                'kpi_details': kpi_details,
+                'is_calculated': True,
+                'calculated_at': timezone.now(),
+                'calculated_by': calculated_by,
+            }
+        )
+        
+        return salary_record
+    
+    @staticmethod
+    def calculate_all_salaries(year, month, calculated_by=None):
+        """Рассчитать зарплаты всех сотрудников за месяц"""
+        from meta_app.employees.models import Employee
+        
+        employees = Employee.objects.filter(is_active=True, is_superuser=False)
+        results = []
+        
+        for employee in employees:
+            salary_record = KPIService.calculate_and_save_salary(
+                employee, year, month, calculated_by
+            )
+            results.append(salary_record)
+        
+        return results

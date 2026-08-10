@@ -103,6 +103,22 @@
                             {% endif %}
                         </div>
                     </div>
+                    <!-- Базовый оклад -->
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <div class="text-muted">
+                                Базовый оклад: 
+                                <b>
+                                    {% if employee.base_salary %}
+                                        {{ employee.base_salary|floatformat:0 }} руб.
+                                    {% else %}
+                                        <span class="text-danger">Не указан</span>
+                                    {% endif %}
+                                </b>
+                            </div>
+                        </div>
+                    </div>
+
                     <!-- Подразделение -->
                     <div class="row mt-2">
                         <div class="col-12">

@@ -1,0 +1,394 @@
+{% extends 'base/base.html' %}
+{% load static %}
+{% load attendance_filters %} 
+
+{% block title %}Таблица зарплат - MetaAdmin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .salary-table {
+        font-size: 13px;
+    }
+    .salary-table th {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        background: #f8f9fa;
+    }
+    .salary-table .dept-header {
+        background: #e9ecef;
+        font-weight: 600;
+    }
+    .salary-cell {
+        cursor: pointer;
+        transition: background 0.2s;
+        text-align: center;
+        padding: 4px 2px !important;
+        min-width: 70px;
+    }
+    .salary-cell:hover {
+        background: #fff3cd !important;
+    }
+    .salary-cell.calculated {
+        background: #d4edda;
+    }
+    .salary-cell.not-calculated {
+        background: #f8f9fa;
+        color: #6c757d;
+    }
+    .salary-cell.current-month {
+        border-left: 3px solid #0d6efd;
+        border-right: 3px solid #0d6efd;
+    }
+    .salary-cell .amount {
+        font-weight: 600;
+        font-size: 13px;
+    }
+    .salary-cell .bonus {
+        font-size: 10px;
+        color: #28a745;
+        display: block;
+    }
+    .salary-cell .base {
+        font-size: 9px;
+        color: #6c757d;
+        display: block;
+    }
+    .salary-cell .not-calculated-text {
+        font-size: 10px;
+        color: #adb5bd;
+    }
+    .btn-calc-month {
+        transition: all 0.2s;
+    }
+    .btn-calc-month:hover {
+        transform: scale(1.05);
+    }
+    .btn-calc-month.calculated {
+        background: #28a745;
+        border-color: #28a745;
+        color: white;
+    }
+    .btn-calc-month.not-calculated {
+        background: #ffc107;
+        border-color: #ffc107;
+        color: #212529;
+    }
+    .salary-total {
+        font-weight: 700;
+        font-size: 14px;
+    }
+    .dept-total {
+        background: #f1f3f5;
+        font-weight: 600;
+    }
+    .table-responsive {
+        max-height: 80vh;
+        overflow-y: auto;
+    }
+    .sticky-col {
+        position: sticky;
+        left: 0;
+        z-index: 5;
+        background: white;
+    }
+    .sticky-col-dept {
+        position: sticky;
+        left: 0;
+        z-index: 6;
+        background: #e9ecef;
+    }
+    .year-nav {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    .year-nav .btn {
+        padding: 4px 12px;
+        font-size: 18px;
+        line-height: 1;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
+    <h1><i class="bi bi-calculator text-primary"></i> Таблица зарплат</h1>
+    <div class="year-nav">
+        <a href="?year={{ year|add:-1 }}" class="btn btn-outline-secondary">
+            <i class="bi bi-chevron-left"></i>
+        </a>
+        <span class="fw-bold h5 mb-0">{{ year }}</span>
+        <a href="?year={{ year|add:1 }}" class="btn btn-outline-secondary">
+            <i class="bi bi-chevron-right"></i>
+        </a>
+        <a href="?year={{ current_year }}" class="btn btn-outline-primary btn-sm">
+            <i class="bi bi-calendar-check"></i> Текущий
+        </a>
+    </div>
+</div>
+
+<!-- Информация -->
+<div class="alert alert-info d-flex justify-content-between align-items-center">
+    <div>
+        <i class="bi bi-info-circle"></i>
+        <strong>Легенда:</strong>
+        <span class="badge bg-success mx-1">Зелёные ячейки</span> — зарплата рассчитана
+        <span class="badge bg-secondary mx-1">Серые ячейки</span> — не рассчитана
+        <span class="badge border border-primary mx-1">Синяя рамка</span> — текущий месяц
+    </div>
+    <div>
+        <button onclick="calculateAllMonths()" class="btn btn-primary">
+            <i class="bi bi-play-circle"></i> Рассчитать все месяцы
+        </button>
+    </div>
+</div>
+
+<!-- Таблица -->
+<div class="card shadow-sm">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-bordered table-hover salary-table mb-0">
+                <thead>
+                    <tr>
+                        <th class="sticky-col" style="min-width: 200px; max-width: 200px;">
+                            Сотрудник / Подразделение
+                        </th>
+                        {% for month in months %}
+                        <th class="text-center" style="min-width: 70px; max-width: 70px;">
+                            {{ month_names|slice:month|last }}
+                            {% if month == current_month and year == current_year %}
+                            <span class="badge bg-primary" style="font-size: 8px;">тек</span>
+                            {% endif %}
+                            <br>
+                            <button class="btn btn-sm btn-calc-month {% if month in calculated_months %}calculated{% else %}not-calculated{% endif %}"
+                                    onclick="calculateMonth({{ year }}, {{ month }})"
+                                    title="Рассчитать зарплату за {{ month_names|slice:month|last }}">
+                                <i class="bi bi-{% if month in calculated_months %}check-circle{% else %}calculator{% endif %}"></i>
+                            </button>
+                        </th>
+                        {% endfor %}
+                        <th class="text-center" style="min-width: 90px; max-width: 90px; background: #f1f3f5;">
+                            Итого
+                        </th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for dept in table_data %}
+                        <!-- Заголовок подразделения -->
+                        <tr>
+                            <td class="sticky-col-dept fw-bold bg-light" colspan="1">
+                                <i class="bi bi-diagram-3 text-primary"></i> {{ dept.department }}
+                            </td>
+                            {% for month in months %}
+                            <td class="text-center bg-light">
+                                <span class="badge bg-secondary" id="dept-total-{{ forloop.counter }}">—</span>
+                            </td>
+                            {% endfor %}
+                            <td class="text-center bg-light fw-bold">—</td>
+                        </tr>
+                        
+                        <!-- Сотрудники -->
+                        {% for emp_data in dept.employees %}
+                        <tr>
+                            <td class="sticky-col" style="min-width: 200px; max-width: 200px;">
+                                <div class="d-flex align-items-center">
+                                    <a href="{% url 'dashboard:employee_detail' emp_data.employee.id %}" 
+                                       class="text-decoration-none text-dark">
+                                        {{ emp_data.employee.short_name }}
+                                    </a>
+                                    <small class="text-muted ms-1" style="font-size: 10px;">
+                                        ({{ emp_data.employee.employee_id }})
+                                    </small>
+                                </div>
+                            </td>
+                            
+                            {% for month in months %}
+                                {% with salary=emp_data.salaries|slice:month|last %}
+                                <td class="salary-cell 
+                                    {% if salary %}
+                                        {% if salary.is_calculated %}calculated{% else %}not-calculated{% endif %}
+                                    {% else %}
+                                        not-calculated
+                                    {% endif %}
+                                    {% if month == current_month and year == current_year %}current-month{% endif %}"
+                                    onclick="window.location.href='{% url 'dashboard:salary_detail' emp_data.employee.id year month %}'"
+                                    style="cursor: pointer;"
+                                    title="{% if salary %}Базовый: {{ salary.base|floatformat:0 }} руб.
+                                Бонус: {{ salary.bonus|floatformat:0 }} руб.{% endif %}
+                                Кликните для детального расчёта">
+                                    
+                                    {% if salary and salary.is_calculated %}
+                                        <span class="amount">{{ salary.total|floatformat:0 }}</span>
+                                        <span class="bonus">+{{ salary.bonus|floatformat:0 }}</span>
+                                        <span class="base">{{ salary.base|floatformat:0 }}</span>
+                                    {% else %}
+                                        <span class="not-calculated-text">—</span>
+                                    {% endif %}
+                                </td>
+                                {% endwith %}
+                            {% endfor %}
+                            
+                            <!-- Итого по сотруднику -->
+                            <td class="text-center salary-total" style="background: #f8f9fa;">
+                                {% with total=emp_data.salaries|sum_values %}
+                                {{ total|floatformat:0 }}
+                                {% endwith %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    {% empty %}
+                    <tr>
+                        <td colspan="14" class="text-center py-4">
+                            <i class="bi bi-inbox" style="font-size: 32px; color: #dee2e6;"></i>
+                            <p class="text-muted mt-2">Нет активных сотрудников</p>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+function calculateMonth(year, month) {
+    // Проверяем, не нажали ли уже
+    const btn = event.target.closest('.btn-calc-month');
+    if (btn.classList.contains('calculated')) {
+        if (!confirm('Зарплата за этот месяц уже рассчитана. Пересчитать?')) {
+            return;
+        }
+    }
+    
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    
+    fetch('{% url "dashboard:calculate_salary_month" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ year: year, month: month })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            btn.className = 'btn btn-sm btn-calc-month calculated';
+            btn.innerHTML = '<i class="bi bi-check-circle"></i>';
+            showNotification('✅ ' + data.message);
+            // Обновляем ячейки для этого месяца
+            updateMonthCells(year, month);
+        } else {
+            btn.className = 'btn btn-sm btn-calc-month not-calculated';
+            btn.innerHTML = '<i class="bi bi-exclamation-triangle"></i>';
+            showNotification('❌ Ошибка: ' + data.error);
+        }
+    })
+    .catch(error => {
+        btn.className = 'btn btn-sm btn-calc-month not-calculated';
+        btn.innerHTML = '<i class="bi bi-x-circle"></i>';
+        showNotification('❌ Ошибка при расчёте');
+        console.error(error);
+    })
+    .finally(() => {
+        btn.disabled = false;
+    });
+}
+
+function calculateAllMonths() {
+    if (!confirm('Рассчитать зарплату за все месяцы {{ year }} года?')) {
+        return;
+    }
+    
+    const months = [1,2,3,4,5,6,7,8,9,10,11,12];
+    let processed = 0;
+    
+    months.forEach(month => {
+        // Находим кнопку для месяца
+        const buttons = document.querySelectorAll('.btn-calc-month');
+        const btn = buttons[month - 1];
+        
+        setTimeout(() => {
+            // Имитируем клик для каждого месяца
+            const event = { target: btn };
+            calculateMonthWithDelay({{ year }}, month, btn, () => {
+                processed++;
+                if (processed === 12) {
+                    showNotification('✅ Все месяцы рассчитаны!');
+                    setTimeout(() => location.reload(), 1000);
+                }
+            });
+        }, month * 500); // Задержка между запросами
+    });
+}
+
+function calculateMonthWithDelay(year, month, btn, callback) {
+    if (!btn) return callback();
+    
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    
+    fetch('{% url "dashboard:calculate_salary_month" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ year: year, month: month })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            btn.className = 'btn btn-sm btn-calc-month calculated';
+            btn.innerHTML = '<i class="bi bi-check-circle"></i>';
+        } else {
+            btn.className = 'btn btn-sm btn-calc-month not-calculated';
+            btn.innerHTML = '<i class="bi bi-x-circle"></i>';
+        }
+    })
+    .catch(() => {
+        btn.className = 'btn btn-sm btn-calc-month not-calculated';
+        btn.innerHTML = '<i class="bi bi-x-circle"></i>';
+    })
+    .finally(() => {
+        btn.disabled = false;
+        callback();
+    });
+}
+
+function updateMonthCells(year, month) {
+    // Обновляем ячейки для указанного месяца
+    location.reload();
+}
+
+function showNotification(message) {
+    const div = document.createElement('div');
+    div.className = 'alert alert-info alert-dismissible fade show position-fixed';
+    div.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        z-index: 9999;
+        max-width: 400px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    `;
+    div.innerHTML = `
+        ${message}
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    `;
+    document.body.appendChild(div);
+    setTimeout(() => { if (div) div.remove(); }, 3000);
+}
+</script>
+
+{% block extra_js %}
+<script>
+// Дополнительные фильтры для суммы по сотруднику
+document.addEventListener('DOMContentLoaded', function() {
+    // Можно добавить сортировку или дополнительные функции
+});
+</script>
+{% endblock %}
+{% endblock %}

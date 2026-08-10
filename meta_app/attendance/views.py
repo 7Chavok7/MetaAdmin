@@ -1,3 +1,4 @@
+# meta_app/attendance/views.py
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required, user_passes_test
 from decimal import Decimal
@@ -6,13 +7,15 @@ from django.utils import timezone
 from datetime import datetime, timedelta
 from meta_app.employees.models import Employee
 from meta_app.workstations.models import EmployeeWorkstation
-from .models import DailyAttendance, MonthlyWorkNorm, VacationRequest
+from .models import DailyAttendance, MonthlyWorkNorm, VacationRequest, KPI
 from .forms import (
     AttendanceForm, 
     MonthlyWorkNormForm, 
     VacationRequestForm, 
     VacationRequestProcessForm
 )
+from .services.kpi_service import KPIService
+
 
 def is_manager(user):
     return user.is_authenticated and (user.is_superuser or user.is_manager)
@@ -480,7 +483,7 @@ def report_employee_hours(request):
 
         report_data.append({
             'employee': employee,
-            'workstation': workstation_name,           # ← ДОБАВЛЕНО!
+            'workstation': workstation_name,
             'work_days': work_days,
             'weekend_works': weekend_works,
             'total_days': total_days,
@@ -511,6 +514,7 @@ def report_employee_hours(request):
         'current_year': today.year,
         'current_month': today.month,
     })
+
 
 @login_required
 @user_passes_test(is_manager)
@@ -724,7 +728,7 @@ def vacation_create(request):
     return render(request, 'attendance/vacation_create.html', {
         'form': form,
     })    
-    
+
 
 @login_required
 def vacation_list(request):
@@ -739,7 +743,7 @@ def vacation_list(request):
                   'vacations': vacations,
                   'is_manager': request.user.is_superuser or request.user.is_manager,
     })
-    
+
 
 @login_required
 @user_passes_test(is_manager)
@@ -781,8 +785,8 @@ def vacation_process(request, vacation_id):
         'form': form,
         'vacation': vacation
     })
-    
-    
+
+
 @login_required
 def vacation_cancel(request, vacation_id):
     """Отмена заявки на отпуск (только для автора)"""
@@ -794,5 +798,5 @@ def vacation_cancel(request, vacation_id):
     
     vacation.status = 'cancelled'
     vacation.save()
-    messages.success(request, 'Заявка на отпуск отмененаю')
+    messages.success(request, 'Заявка на отпуск отменена')
     return redirect('dashboard:vacation_list')

@@ -1,4 +1,4 @@
-# meta_app/attendace/forms.py | A.Grrachev
+# meta_app/attendance/forms.py | A.Grachev
 from django import forms
 from .models import DailyAttendance, MonthlyWorkNorm, VacationRequest
 
@@ -54,11 +54,9 @@ class MonthlyWorkNormBulkForm(forms.Form):
     )
 
     def __init__(self, *args, **kwargs):
-        # Получаем год из kwargs
         year = kwargs.pop('year', None)
         super().__init__(*args, **kwargs)
 
-        # Устанавливаем начальное значение для года
         if year:
             self.initial['year'] = year
 
@@ -135,7 +133,7 @@ class VacationRequestForm(forms.ModelForm):
                     'type': 'date',
                     'class': 'form-control'
                 }),
-            'comment': forms.TextInput(
+            'comment': forms.Textarea(
                 attrs={
                     'rows': 2,
                     'class': 'form-control'
@@ -143,18 +141,17 @@ class VacationRequestForm(forms.ModelForm):
         }
         labels = {
             'start_date': 'Дата начала отпуска',
-            'end_date': 'Даа окончания отпуска',
+            'end_date': 'Дата окончания отпуска',
             'comment': 'Комментарий'
         }
         
     def clean(self):
-        """Проверка на правильность ввода"""
         cleaned_data = super().clean()
         start_date = cleaned_data.get('start_date')
         end_date = cleaned_data.get('end_date')
         
         if start_date and end_date and start_date > end_date:
-            raise forms.ValidationError('Дата начала не может быть позжк даты окончания')
+            raise forms.ValidationError('Дата начала не может быть позже даты окончания')
         return cleaned_data
     
     
@@ -169,7 +166,7 @@ class VacationRequestProcessForm(forms.ModelForm):
                 attrs={
                     'class': 'form-select'
                 }),
-            'comment': forms.TextInput(
+            'comment': forms.Textarea(
                 attrs={
                     'rows': 2,
                     'class': 'form-control'

@@ -1,4 +1,6 @@
 # meta_app/dashboard/views.py | A.Grachev
+import json
+from django.http import JsonResponse
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, logout, authenticate
@@ -7,8 +9,11 @@ from django.db import IntegrityError
 from django.db.models import Q
 from django.utils import timezone
 from datetime import timedelta
+from decimal import Decimal
+from django.views.decorators.csrf import csrf_exempt
 
-from meta_app.attendance.models import DailyAttendance, MonthlyWorkNorm
+from meta_app.attendance.services.kpi_service import KPIService
+from meta_app.attendance.models import DailyAttendance, MonthlyWorkNorm, KPI, SalaryRecord
 from meta_app.employees.models import Employee, Skill, EmployeeSkill
 from meta_app.employees.forms import EmployeeForm, EmployeeCreateForm, EmployeeSelfEditForm
 from meta_app.employees.decorators import (
@@ -330,6 +335,7 @@ def employee_list(request):
         'departments': Department.objects.filter(is_active=True),
     })
 
+
 @login_required
 def employee_detail(request, employee_id):
     """Карточка сотрудника"""
@@ -641,6 +647,10 @@ def employee_workstation_set_primary(request, employee_id, workstation_id):
     return redirect('dashboard:employee_workstations', employee_id=employee.id)
 
 
+# ============================================
+# УЧАСТКИ (СПИСОК)
+# ============================================
+
 @login_required
 @manager_or_director_required
 def workstation_list(request):
@@ -673,3 +683,375 @@ def workstation_list(request):
         'selected_department': department_id,
         'search': search,
     })
+
+
+# ============================================
+# УПРАВЛЕНИЕ KPI (CRUD)
+# ============================================
+
+@login_required
+@director_required
+def kpi_list(request):
+    """Список всех KPI"""
+    kpis = KPI.objects.all().order_by('is_active', 'name')
+    return render(request, 'dashboard/kpi_list.html', {
+        'kpis': kpis,
+    })
+
+
+@login_required
+@director_required
+def kpi_create(request):
+    """Создание KPI"""
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        type = request.POST.get('type')
+        bonus_amount = request.POST.get('bonus_amount', 0)
+        bonus_percent = request.POST.get('bonus_percent', 0)
+        skill_price = request.POST.get('skill_price', 0)
+        is_active = request.POST.get('is_active') == 'on'
+        
+        if not name:
+            messages.error(request, 'Название KPI обязательно')
+            return redirect('dashboard:kpi_create')
+        
+        KPI.objects.create(
+            name=name,
+            type=type,
+            bonus_amount=bonus_amount,
+            bonus_percent=bonus_percent,
+            skill_price=skill_price,
+            is_active=is_active,
+        )
+        messages.success(request, f'KPI "{name}" создан!')
+        return redirect('dashboard:kpi_list')
+    
+    return render(request, 'dashboard/kpi_form.html', {
+        'title': 'Создать KPI',
+        'kpi': None,
+        'type_choices': KPI.TYPE_CHOICES,
+    })
+
+
+@login_required
+@director_required
+def kpi_edit(request, kpi_id):
+    """Редактирование KPI"""
+    kpi = get_object_or_404(KPI, id=kpi_id)
+    
+    if request.method == 'POST':
+        kpi.name = request.POST.get('name')
+        kpi.type = request.POST.get('type')
+        kpi.bonus_amount = request.POST.get('bonus_amount', 0)
+        kpi.bonus_percent = request.POST.get('bonus_percent', 0)
+        kpi.skill_price = request.POST.get('skill_price', 0)
+        kpi.is_active = request.POST.get('is_active') == 'on'
+        kpi.save()
+        
+        messages.success(request, f'KPI "{kpi.name}" обновлён!')
+        return redirect('dashboard:kpi_list')
+    
+    return render(request, 'dashboard/kpi_form.html', {
+        'title': 'Редактировать KPI',
+        'kpi': kpi,
+        'type_choices': KPI.TYPE_CHOICES,
+    })
+
+
+@login_required
+@director_required
+def kpi_delete(request, kpi_id):
+    """Удаление KPI"""
+    kpi = get_object_or_404(KPI, id=kpi_id)
+    
+    if request.method == 'POST':
+        name = kpi.name
+        kpi.delete()
+        messages.success(request, f'KPI "{name}" удалён!')
+        return redirect('dashboard:kpi_list')
+    
+    return render(request, 'dashboard/kpi_confirm_delete.html', {
+        'kpi': kpi,
+    })
+
+
+# ============================================
+# РАСЧЁТ ЗАРПЛАТЫ
+# ============================================
+
+@login_required
+@director_required
+@csrf_exempt
+def calculate_salary(request):
+    """API для расчёта зарплаты за текущий месяц"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Метод не разрешён'}, status=405)
+    
+    try:
+        year = timezone.now().year
+        month = timezone.now().month
+        
+        employees = Employee.objects.filter(is_active=True, is_superuser=False)
+        
+        total_salary = Decimal('0')
+        results = []
+        
+        for employee in employees:
+            kpi_results = KPIService.calculate_all_kpis_for_month(employee, year, month)
+            
+            base_salary = Decimal(str(employee.base_salary or 0))
+            total_bonus = sum([Decimal(str(r['bonus'])) for r in kpi_results], Decimal('0'))
+            total = base_salary + total_bonus
+            
+            total_salary += total
+            results.append({
+                'employee': employee.full_name,
+                'base_salary': float(base_salary),
+                'bonus': float(total_bonus),
+                'total': float(total),
+            })
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Зарплата рассчитана! Всего: {total_salary:.2f} руб.',
+            'total_salary': float(total_salary),
+            'employees': results,
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+        }, status=500)
+        
+        
+@login_required
+@director_required
+def salary_table(request):
+    """Страница таблицы зарплат"""
+    
+    # Получаем год из GET-параметров
+    current_year = timezone.now().year
+    year = int(request.GET.get('year', current_year))
+    
+    # Получаем все месяцы (1-12)
+    months = range(1, 13)
+    
+    # Получаем сотрудников, сгруппированных по подразделениям
+    employees = Employee.objects.filter(
+        is_active=True,
+        is_superuser=False
+    ).select_related('department').order_by('department__name', 'last_name')
+    
+    # Группируем по подразделениям
+    departments_dict = {}
+    for emp in employees:
+        dept_name = emp.department.name if emp.department else 'Без подразделения'
+        if dept_name not in departments_dict:
+            departments_dict[dept_name] = []
+        departments_dict[dept_name].append(emp)
+    
+    # Сортируем подразделения
+    sorted_departments = sorted(departments_dict.items())
+    
+    # Собираем данные для таблицы
+    table_data = []
+    for dept_name, dept_employees in sorted_departments:
+        dept_data = {
+            'department': dept_name,
+            'employees': []
+        }
+        
+        for employee in dept_employees:
+            # Получаем зарплаты за каждый месяц
+            salary_records = SalaryRecord.objects.filter(
+                employee=employee,
+                year=year
+            ).order_by('month')
+            
+            # Создаём массив из 12 месяцев
+            month_salaries = [None] * 12
+            for record in salary_records:
+                month_salaries[record.month - 1] = {
+                    'total': float(record.total_salary),
+                    'base': float(record.base_salary),
+                    'bonus': float(record.kpi_bonus),
+                    'is_calculated': record.is_calculated,
+                }
+            
+            dept_data['employees'].append({
+                'employee': employee,
+                'salaries': month_salaries,
+            })
+        
+        table_data.append(dept_data)
+    
+    # Проверяем, какие месяцы уже рассчитаны
+    calculated_months = set()
+    for record in SalaryRecord.objects.filter(year=year).values_list('month', flat=True).distinct():
+        calculated_months.add(record)
+    
+    # Получаем текущий месяц для подсветки
+    current_month = timezone.now().month
+    
+    context = {
+        'table_data': table_data,
+        'year': year,
+        'current_year': current_year,
+        'months': months,
+        'calculated_months': calculated_months,
+        'current_month': current_month,
+        'month_names': ['Янв', 'Фев', 'Мар', 'Апр', 'Май', 'Июн',
+                        'Июл', 'Авг', 'Сен', 'Окт', 'Ноя', 'Дек'],
+    }
+    
+    return render(request, 'dashboard/salary_table.html', context)
+
+
+@login_required
+@director_required
+@csrf_exempt
+def calculate_salary_month(request):
+    """API для расчёта зарплаты за конкретный месяц"""
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Метод не разрешён'}, status=405)
+    
+    try:
+        data = json.loads(request.body)
+        year = data.get('year')
+        month = data.get('month')
+        
+        if not year or not month:
+            return JsonResponse({'error': 'Укажите год и месяц'}, status=400)
+        
+        # Рассчитываем зарплаты
+        results = KPIService.calculate_all_salaries(
+            year, month, calculated_by=request.user
+        )
+        
+        return JsonResponse({
+            'success': True,
+            'message': f'Зарплата за {month}.{year} рассчитана!',
+            'count': len(results),
+        })
+        
+    except Exception as e:
+        import traceback
+        print(traceback.format_exc())  # ← Добавить для отладки
+        return JsonResponse({
+            'success': False,
+            'error': str(e),
+        }, status=500)
+        
+        
+@login_required
+@director_required
+def salary_detail(request, employee_id, year, month):
+    """Детальный расчёт зарплаты сотрудника за месяц"""
+    
+    employee = get_object_or_404(Employee, id=employee_id)
+    
+    # Получаем запись о зарплате
+    salary_record = SalaryRecord.objects.filter(
+        employee=employee,
+        year=year,
+        month=month
+    ).first()
+    
+    # Если записи нет — рассчитываем
+    if not salary_record:
+        salary_record = KPIService.calculate_and_save_salary(
+            employee, year, month, calculated_by=request.user
+        )
+    
+    # Получаем детали KPI
+    kpi_details = salary_record.kpi_details if salary_record else {}
+    
+    # Получаем все KPI
+    all_kpis = KPI.objects.filter(is_active=True)
+    
+    # Формируем список KPI с результатами
+    kpi_results = []
+    for kpi in all_kpis:
+        detail = kpi_details.get(kpi.name, {})
+        kpi_results.append({
+            'kpi': kpi,
+            'completed': detail.get('completed', False),
+            'bonus': detail.get('bonus', 0),
+        })
+    
+    # ============================================
+    # ФОРМИРУЕМ КАЛЕНДАРЬ НА МЕСЯЦ
+    # ============================================
+    import calendar
+    from datetime import date
+    
+    # Получаем все записи за месяц
+    attendances = DailyAttendance.objects.filter(
+        employee=employee,
+        record_date__year=year,
+        record_date__month=month
+    )
+    
+    # Создаём словарь для быстрого доступа по дню
+    attendance_map = {}
+    for att in attendances:
+        attendance_map[att.record_date.day] = att
+    
+    # Формируем календарь
+    today = timezone.now().date()
+    _, days_in_month = calendar.monthrange(year, month)
+    
+    calendar_days = []
+    for day in range(1, days_in_month + 1):
+        current_date = date(year, month, day)
+        is_weekend = current_date.weekday() >= 5
+        is_today = current_date == today
+        
+        att = attendance_map.get(day)
+        
+        if att:
+            # Есть запись
+            status = att.status
+            hours = att.actual_hours
+        elif is_weekend:
+            # Выходной день без записи
+            status = 'weekend'
+            hours = 0
+        else:
+            # Нет записи в рабочий день
+            status = 'no_record'
+            hours = 0
+        
+        calendar_days.append({
+            'day': day,
+            'date': current_date,
+            'is_weekend': is_weekend,
+            'is_today': is_today,
+            'status': status,
+            'hours': float(hours) if hours else 0,
+        })
+    
+    # Статистика
+    work_days = attendances.filter(is_weekend_shift=False).count()
+    weekend_works = attendances.filter(is_weekend_shift=True).count()
+    total_days = attendances.count()
+    total_hours = sum([att.actual_hours for att in attendances])
+    
+    context = {
+        'employee': employee,
+        'year': year,
+        'month': month,
+        'month_name': ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
+                       'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь'][month - 1],
+        'salary_record': salary_record,
+        'kpi_results': kpi_results,
+        'calendar_days': calendar_days,
+        'work_days': work_days,
+        'weekend_days': weekend_works,
+        'total_days': total_days,
+        'total_hours': float(total_hours),
+        'today': today,
+    }
+    
+    return render(request, 'dashboard/salary_detail.html', context)

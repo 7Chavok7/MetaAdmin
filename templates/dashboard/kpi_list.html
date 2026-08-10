@@ -1,0 +1,73 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Управление KPI - MetaAdmin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-award text-primary"></i> Управление KPI</h1>
+    <a href="{% url 'dashboard:kpi_create' %}" class="btn btn-success">
+        <i class="bi bi-plus"></i> Добавить KPI
+    </a>
+</div>
+
+<div class="card shadow-sm">
+    <div class="card-header bg-primary text-white">
+        <h5 class="mb-0"><i class="bi bi-list-ul"></i> Список KPI</h5>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Название</th>
+                        <th>Тип</th>
+                        <th class="text-center">Бонус (руб.)</th>
+                        <th class="text-center">Бонус (%)</th>
+                        <th class="text-center">Цена за навык</th>
+                        <th class="text-center">Статус</th>
+                        <th class="text-center">Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for kpi in kpis %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td><strong>{{ kpi.name }}</strong></td>
+                        <td>{{ kpi.get_type_display }}</td>
+                        <td class="text-center">{{ kpi.bonus_amount|floatformat:0|default:"—" }}</td>
+                        <td class="text-center">{{ kpi.bonus_percent|floatformat:0|default:"—" }}</td>
+                        <td class="text-center">{{ kpi.skill_price|floatformat:0|default:"—" }}</td>
+                        <td class="text-center">
+                            {% if kpi.is_active %}
+                            <span class="badge bg-success">Активен</span>
+                            {% else %}
+                            <span class="badge bg-danger">Неактивен</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <a href="{% url 'dashboard:kpi_edit' kpi.id %}" class="btn btn-outline-primary btn-sm">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                            <a href="{% url 'dashboard:kpi_delete' kpi.id %}" class="btn btn-outline-danger btn-sm">
+                                <i class="bi bi-trash"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4">
+                            <i class="bi bi-award" style="font-size: 32px; color: #dee2e6;"></i>
+                            <p class="text-muted mt-2">KPI пока нет</p>
+                            <a href="{% url 'dashboard:kpi_create' %}" class="btn btn-primary btn-sm">
+                                <i class="bi bi-plus"></i> Создать первый KPI
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

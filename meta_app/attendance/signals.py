@@ -1,3 +1,4 @@
+# meta_app/attendance/signals.py
 from django.db.models.signals import post_save, post_delete
 from django.dispatch import receiver
 from channels.layers import get_channel_layer

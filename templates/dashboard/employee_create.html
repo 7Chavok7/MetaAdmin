@@ -86,6 +86,21 @@
             </div>
 
             <hr>
+
+            <!-- Базовый оклад -->
+            <div class="row">
+                <div class="col-md-6">
+                    <div class="mb-3">
+                        <label for="{{ form.base_salary.id_for_label }}" class="form-label fw-bold">Базовый оклад (руб.)</label>
+                        {{ form.base_salary }}
+                        <small class="text-muted d-block">Только для руководителей</small>
+                        {% if form.base_salary.errors %}
+                        <div class="text-danger small">{{ form.base_salary.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
             <!-- Личная информация -->
             <h6 class="fw-bold">Личная информация</h6>
             <div class="row">

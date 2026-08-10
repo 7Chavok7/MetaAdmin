@@ -1,3 +1,4 @@
+# meta_app/attendance/models.py
 from django.db import models
 from django.utils import timezone
 from meta_app.employees.models import Employee
@@ -170,7 +171,7 @@ class MonthlyWorkNorm(models.Model):
     hours_norm = models.DecimalField(
         max_digits=5,
         decimal_places=1,
-        verbose_name='Норма часов (40-чвсовая неделя)'
+        verbose_name='Норма часов (40-часовая неделя)'
     )
     
     class Meta:
@@ -260,7 +261,7 @@ class VacationRequest(models.Model):
 class KPI(models.Model):
     """Справочник KPI — просто и понятно"""
     
-    # 🔥 Упрощенные типы KPI
+    # Упрощенные типы KPI
     TYPE_CHOICES = [
         ('no_absence', 'Нет пропусков (любых)'),
         ('has_skills', 'Есть навыки'),
@@ -314,3 +315,71 @@ class KPI(models.Model):
     
     def __str__(self):
         return f"{self.name} ({'✅' if self.is_active else '❌'})"
+    
+    
+class SalaryRecord(models.Model):
+    """Запись о зарплате сотрудника за месяц"""
+    
+    employee = models.ForeignKey(
+        'employees.Employee',
+        on_delete=models.CASCADE,
+        related_name='salary_records',
+        verbose_name='Сотрудник'
+    )
+    year = models.IntegerField(verbose_name='Год')
+    month = models.IntegerField(verbose_name='Месяц')
+    
+    # Составляющие зарплаты
+    base_salary = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.0,
+        verbose_name='Базовый оклад'
+    )
+    kpi_bonus = models.DecimalField(
+        max_digits=10,
+        decimal_places=2,
+        default=0.0,
+        verbose_name='Бонус по KPI'
+    )
+    total_salary = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        default=0.0,
+        verbose_name='Итого зарплата'
+    )
+    
+    # Детали по KPI (для отладки)
+    kpi_details = models.JSONField(
+        default=dict,
+        blank=True,
+        verbose_name='Детали KPI'
+    )
+    
+    # Статус расчета
+    is_calculated = models.BooleanField(
+        default=False,
+        verbose_name='Рассчитано'
+    )
+    calculated_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name='Дата расчета'
+    )
+    calculated_by = models.ForeignKey(
+        'employees.Employee',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='calculated_salaries',
+        verbose_name='Кто рассчитал'
+    )
+    
+    class Meta:
+        verbose_name = 'Запись зарплаты'
+        verbose_name_plural = 'Записи зарплат'
+        unique_together = ['employee', 'year', 'month']
+        ordering = ['-year', '-month', 'employee__last_name']
+    
+    def __str__(self):
+        return f"{self.employee.full_name} - {self.month}.{self.year}: {self.total_salary}"

@@ -25,19 +25,12 @@
         <div class="card shadow-sm">
             <div class="card-header bg-primary text-white">
                 <h5 class="mb-0">
-                    <i class="bi bi-pencil"></i> Редактирование записи
+                    <i class="bi bi-pencil"></i> 
+                    <strong>{{ attendance.employee.full_name }}</strong> 
+                    <small class="text-muted">Таб. №{{ attendance.employee.employee_id }}</small>
                 </h5>
             </div>
             <div class="card-body">
-                <div class="alert alert-info">
-                    <strong>{{ attendance.employee.full_name }}</strong>
-                    <br><small class="text-muted">Таб. №{{ attendance.employee.employee_id }}</small>
-                </div>
-                
-                <div class="alert alert-secondary">
-                    <i class="bi bi-info-circle"></i> 
-                    <strong>Внимание:</strong> Если рабочий день больше 6 часов, автоматически вычитается <strong>1 час обеда</strong>.
-                </div>
                 
                 <form method="post">
                     {% csrf_token %}
