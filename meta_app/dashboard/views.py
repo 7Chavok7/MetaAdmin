@@ -1,29 +1,67 @@
+# meta_app/dashboard/views.py | A.Grachev
 from django.shortcuts import render, get_object_or_404, redirect
-from django.contrib.auth.decorators import login_required, user_passes_test
+from django.contrib.auth.decorators import login_required
 from django.contrib.auth import login, logout, authenticate
 from django.contrib import messages
 from django.db import IntegrityError
+from django.db.models import Q
 from django.utils import timezone
 from datetime import timedelta
+
+from meta_app.attendance.models import DailyAttendance, MonthlyWorkNorm
 from meta_app.employees.models import Employee, Skill, EmployeeSkill
 from meta_app.employees.forms import EmployeeForm, EmployeeCreateForm, EmployeeSelfEditForm
-from meta_app.workstations.models import Workstation, EmployeeWorkstation
+from meta_app.employees.decorators import (
+    manager_or_director_required,
+    director_required,
+    is_manager,
+    is_director
+)
+from meta_app.workstations.models import Workstation, EmployeeWorkstation, Department
 from .forms import LoginForm
 
 
-def is_manager(user):
-    """Проверка, является ли пользователь менеджером"""
-    return user.is_authenticated and (user.is_superuser or user.is_manager)
+# ============================================
+# ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ
+# ============================================
 
+def get_user_role(user):
+    """Получить роль пользователя"""
+    if not user.is_authenticated:
+        return 'anonymous'
+    if hasattr(user, 'role'):
+        return user.role
+    if user.is_superuser:
+        return 'director'
+    if user.is_manager:
+        return 'manager'
+    return 'employee'
+
+
+def get_employees_for_user(user):
+    if user.is_superuser or is_director(user):
+        return Employee.objects.filter(is_superuser=False)
+    elif is_manager(user):
+        if user.department:
+            return Employee.objects.filter(
+                department=user.department,
+                is_superuser=False
+            )
+        return Employee.objects.filter(is_superuser=False)
+    else:
+        return Employee.objects.filter(id=user.id)
+
+
+# ============================================
+# АУТЕНТИФИКАЦИЯ
+# ============================================
 
 def login_view(request):
     """Страница входа"""
     if request.user.is_authenticated:
-        # Редирект после входа в зависимости от роли
-        if request.user.is_superuser or request.user.is_manager:
+        if is_manager(request.user):
             return redirect('dashboard:home')
         else:
-            # Обычные сотрудники → в мессенджер
             return redirect('messenger:index')
 
     if request.method == 'POST':
@@ -34,19 +72,16 @@ def login_view(request):
             user = authenticate(request, username=username, password=password)
             if user is not None:
                 login(request, user)
-                messages.success(
-                    request, f'Добро пожаловать, {user.full_name}!')
+                messages.success(request, f'Добро пожаловать, {user.full_name}!')
 
-                # Редирект после входа в зависимости от роли
-                if user.is_superuser or user.is_manager:
+                if is_manager(user):
                     return redirect('dashboard:home')
                 else:
-                    return redirect('dashboard:employee_detail', employee_id=user.id)
+                    return redirect('messenger:index')
             else:
                 messages.error(request, 'Неверный логин или пароль.')
         else:
-            messages.error(
-                request, 'Ошибка входа. Проверьте введенные данные.')
+            messages.error(request, 'Ошибка входа. Проверьте введенные данные.')
     else:
         form = LoginForm()
 
@@ -60,103 +95,299 @@ def logout_view(request):
     return redirect('dashboard:login')
 
 
-@login_required
-def employee_list(request):
-    """Список всех сотрудников (только для менеджеров и админов)"""
-    # Проверяем права
-    if not (request.user.is_superuser or request.user.is_manager):
-        messages.error(request, 'У вас нет доступа к списку сотрудников')
-        return redirect('dashboard:employee_detail', employee_id=request.user.id)
+# ============================================
+# ГЛАВНАЯ СТРАНИЦА / РЕДИРЕКТ
+# ============================================
 
-    # Менеджер/админ видят всех активных сотрудников
-    employees = Employee.objects.filter(
+@login_required
+def home_redirect(request):
+    """Главная страница с редиректом в зависимости от роли"""
+    if is_director(request.user):
+        return redirect('dashboard:director_dashboard')
+    elif is_manager(request.user):
+        return redirect('dashboard:attendance_calendar')
+    else:
+        return redirect('messenger:index')
+
+
+# ============================================
+# ДИРЕКТОРСКИЙ ДАШБОРД
+# ============================================
+
+@login_required
+@director_required
+def director_dashboard(request):
+    """Дашборд для директора"""
+    
+    today = timezone.now().date()
+    
+    # Статистика
+    total_employees = Employee.objects.filter(is_active=True, is_superuser=False).count()
+    total_departments = Department.objects.filter(is_active=True).count()
+    total_workstations = Workstation.objects.filter(is_active=True).count()
+    
+    # Присутствие сегодня
+    today_attendances = DailyAttendance.objects.filter(record_date=today)
+    present_count = today_attendances.filter(is_present=True).count()
+    total_today = today_attendances.count()
+    
+    # Сотрудники без подразделения
+    employees_without_dept = Employee.objects.filter(
+        department__isnull=True,
         is_active=True,
         is_superuser=False
-    ).order_by('last_name', 'first_name')
+    ).count()
+    
+    context = {
+        'total_employees': total_employees,
+        'total_departments': total_departments,
+        'total_workstations': total_workstations,
+        'employees_without_dept': employees_without_dept,
+        'today_attendance': {
+            'present': present_count,
+            'total': total_today,
+            'percent': round(present_count / total_today * 100, 1) if total_today > 0 else 0,
+        },
+        'recent_employees': Employee.objects.filter(
+            is_active=True, is_superuser=False
+        ).order_by('-created_at')[:5],
+        'departments': Department.objects.filter(parent__isnull=True, is_active=True),
+        'today': today,
+        'current_time': timezone.now(),
+    }
+    
+    return render(request, 'dashboard/director_dashboard.html', context)
 
-    # Исключаем уволенных
-    active_employees = []
-    for emp in employees:
-        if not emp.dismissal_date:
-            active_employees.append(emp)
-        elif emp.dismissal_date > timezone.now().date():
-            active_employees.append(emp)
 
-    return render(request, 'dashboard/employee_list.html', {
-        'employees': active_employees,
-        'can_edit': True,
+# ============================================
+# УПРАВЛЕНИЕ ПОДРАЗДЕЛЕНИЯМИ (CRUD)
+# ============================================
+
+@login_required
+@director_required
+def department_list(request):
+    """Список всех подразделений"""
+    departments = Department.objects.filter(is_active=True)
+    return render(request, 'dashboard/department_list.html', {
+        'departments': departments,
     })
 
+
+@login_required
+@director_required
+def department_create(request):
+    """Создание подразделения"""
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        code = request.POST.get('code')
+        parent_id = request.POST.get('parent')
+        description = request.POST.get('description', '')
+        
+        if not name or not code:
+            messages.error(request, 'Название и код обязательны')
+            return redirect('dashboard:department_create')
+        
+        parent = None
+        if parent_id:
+            parent = get_object_or_404(Department, id=parent_id)
+        
+        try:
+            department = Department.objects.create(
+                name=name,
+                code=code.upper(),
+                parent=parent,
+                description=description,
+                is_active=True
+            )
+            messages.success(request, f'Подразделение "{name}" создано!')
+            return redirect('dashboard:department_list')
+        except IntegrityError:
+            messages.error(request, 'Подразделение с таким кодом уже существует')
+    
+    parents = Department.objects.filter(parent__isnull=True, is_active=True)
+    return render(request, 'dashboard/department_form.html', {
+        'parents': parents,
+        'title': 'Создать подразделение',
+    })
+
+
+@login_required
+@director_required
+def department_edit(request, department_id):
+    """Редактирование подразделения"""
+    department = get_object_or_404(Department, id=department_id)
+    
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        code = request.POST.get('code')
+        parent_id = request.POST.get('parent')
+        description = request.POST.get('description', '')
+        is_active = request.POST.get('is_active') == 'on'
+        
+        if not name or not code:
+            messages.error(request, 'Название и код обязательны')
+            return redirect('dashboard:department_edit', department_id=department.id)
+        
+        parent = None
+        if parent_id:
+            parent = get_object_or_404(Department, id=parent_id)
+            # Нельзя назначить себя или потомка как родителя
+            if parent.id == department.id:
+                messages.error(request, 'Нельзя назначить подразделение родителем самого себя')
+                return redirect('dashboard:department_edit', department_id=department.id)
+        
+        department.name = name
+        department.code = code.upper()
+        department.parent = parent
+        department.description = description
+        department.is_active = is_active
+        department.save()
+        
+        messages.success(request, f'Подразделение "{name}" обновлено!')
+        return redirect('dashboard:department_list')
+    
+    parents = Department.objects.filter(parent__isnull=True, is_active=True).exclude(id=department.id)
+    return render(request, 'dashboard/department_form.html', {
+        'department': department,
+        'parents': parents,
+        'title': 'Редактировать подразделение',
+    })
+
+
+@login_required
+@director_required
+def department_delete(request, department_id):
+    """Удаление подразделения (мягкое)"""
+    department = get_object_or_404(Department, id=department_id)
+    
+    if request.method == 'POST':
+        # Проверяем, есть ли сотрудники в этом подразделении
+        if department.employees.filter(is_active=True).exists():
+            messages.error(
+                request, 
+                f'Нельзя удалить подразделение "{department.name}", '
+                'так как в нём есть сотрудники. Сначала переместите их.'
+            )
+            return redirect('dashboard:department_list')
+        
+        department.is_active = False
+        department.save()
+        messages.success(request, f'Подразделение "{department.name}" помечено как неактивное')
+        return redirect('dashboard:department_list')
+    
+    return render(request, 'dashboard/department_confirm_delete.html', {
+        'department': department,
+    })
+
+
+# ============================================
+# СОТРУДНИКИ (CRUD)
+# ============================================
+
+@login_required
+@manager_or_director_required
+def employee_list(request):
+    """Список всех сотрудников (только для руководителей)"""
+    employees = get_employees_for_user(request.user)
+    
+    # Поиск
+    search = request.GET.get('search')
+    if search:
+        employees = employees.filter(
+            Q(last_name__icontains=search) |
+            Q(first_name__icontains=search) |
+            Q(patronymic__icontains=search) |
+            Q(employee_id__icontains=search)
+        )
+    
+    # Фильтр по статусу
+    status = request.GET.get('status')
+    if status == 'active':
+        employees = employees.filter(is_active=True, dismissal_date__isnull=True)
+    elif status == 'dismissed':
+        employees = employees.filter(dismissal_date__isnull=False)
+    elif status == 'no_department':
+        employees = employees.filter(department__isnull=True, is_active=True)
+    
+    # Фильтр по подразделению
+    department_id = request.GET.get('department')
+    if department_id:
+        employees = employees.filter(department_id=department_id)
+    
+    # Сортировка
+    sort = request.GET.get('sort', 'last_name')
+    if sort == 'last_name':
+        employees = employees.order_by('last_name', 'first_name')
+    elif sort == 'hire_date':
+        employees = employees.order_by('-hire_date')
+    elif sort == 'department':
+        employees = employees.order_by('department__name', 'last_name')
+    
+    return render(request, 'dashboard/employee_list.html', {
+        'employees': employees,
+        'can_edit': is_manager(request.user),
+        'is_director': is_director(request.user),
+        'departments': Department.objects.filter(is_active=True),
+    })
 
 @login_required
 def employee_detail(request, employee_id):
     """Карточка сотрудника"""
     employee = get_object_or_404(Employee, id=employee_id)
-
+    
     # Проверяем доступ
     is_self = request.user.id == employee.id
-    is_admin_or_manager = request.user.is_superuser or request.user.is_manager
-
-    # Обычный сотрудник видит только себя
+    is_admin_or_manager = is_manager(request.user)
+    
     if not is_admin_or_manager and not is_self:
         messages.error(request, 'У вас нет доступа к этой карточке')
         return redirect('dashboard:employee_detail', employee_id=request.user.id)
-
-    # Если сотрудник уволен и это не суперпользователь — запрещаем просмотр
+    
+    # Если сотрудник уволен и это не руководитель — запрещаем
     if employee.dismissal_date and employee.dismissal_date < timezone.now().date():
-        if not request.user.is_superuser:
-            messages.error(
-                request, 'Карточка уволенного сотрудника недоступна')
+        if not is_admin_or_manager and not request.user.is_superuser:
+            messages.error(request, 'Карточка уволенного сотрудника недоступна')
             return redirect('dashboard:home')
-        
-    # Получаем навыки сотрудника
+    
+    # Получаем навыки и участки
     skills = employee.employee_skills.select_related('skill').all()
-
-    # Получаем участки сотрудника
-    workstation_assignments = employee.workstation_assignments.select_related(
-        'workstation').all()
-
-    # Получаем месяц и год из GET-параметров
+    workstation_assignments = employee.workstation_assignments.select_related('workstation').all()
+    
+    # Месяц и год
     today = timezone.now().date()
     month = int(request.GET.get('month', today.month))
     year = int(request.GET.get('year', today.year))
-
-    # Проверяем, что месяц в диапазоне 1-12
+    
     if month < 1:
         month = 12
         year -= 1
     elif month > 12:
         month = 1
         year += 1
-
-    # Получаем записи о работе за выбранный месяц
+    
+    # Записи о работе
     attendances = employee.attendances.filter(
         record_date__year=year,
         record_date__month=month
     ).order_by('-record_date')
-
-    # Считаем статистику за месяц
-    total_hours = sum(
-        [att.actual_hours for att in attendances if att.is_present])
+    
+    # Статистика
+    total_hours = sum([att.actual_hours for att in attendances if att.is_present])
     total_overtime = sum([att.overtime_hours for att in attendances])
     work_days = attendances.filter(is_present=True).count()
     avg_hours = total_hours / work_days if work_days > 0 else 0
-
-    # Количество выходов в выходные дни
     weekend_days = attendances.filter(is_weekend_shift=True).count()
-
-    # Получаем норму часов за месяц
-    from meta_app.attendance.models import MonthlyWorkNorm
+    
+    # Норма часов
     try:
         norm = MonthlyWorkNorm.objects.get(year=year, month=month)
         hours_norm = norm.hours_norm
     except MonthlyWorkNorm.DoesNotExist:
         hours_norm = 0
-
-    # Названия месяцев
+    
     months = ['Январь', 'Февраль', 'Март', 'Апрель', 'Май', 'Июнь',
               'Июль', 'Август', 'Сентябрь', 'Октябрь', 'Ноябрь', 'Декабрь']
-
+    
     return render(request, 'dashboard/employee_detail.html', {
         'employee': employee,
         'skills': skills,
@@ -170,7 +401,7 @@ def employee_detail(request, employee_id):
             'hours_norm': hours_norm,
             'weekend_days': weekend_days,
         },
-        'can_edit': request.user.is_superuser or request.user.is_manager or is_self,
+        'can_edit': is_manager(request.user) or is_self,
         'is_self': is_self,
         'month_name': months[month - 1],
         'month': month,
@@ -185,28 +416,22 @@ def employee_detail(request, employee_id):
 
 
 @login_required
-@user_passes_test(is_manager)
+@manager_or_director_required
 def employee_create(request):
     """Создание нового сотрудника"""
-    if not (request.user.is_superuser or request.user.is_manager):
-        messages.error(request, 'У вас нет прав на создание сотрудников!')
-        return redirect('dashboard:home')
-
     if request.method == 'POST':
         form = EmployeeCreateForm(request.POST, request.FILES)
         if form.is_valid():
-            current_user = Employee.objects.get(id=request.user.id)
             employee = form.save(commit=False)
-            employee.created_by = current_user
-            employee.updated_by = current_user
+            employee.created_by = request.user
+            employee.updated_by = request.user
             employee.save()
-
-            messages.success(
-                request, f'Сотрудник {employee.full_name} успешно создан!')
+            
+            messages.success(request, f'Сотрудник {employee.full_name} успешно создан!')
             return redirect('dashboard:employee_detail', employee_id=employee.id)
     else:
         form = EmployeeCreateForm()
-
+    
     return render(request, 'dashboard/employee_create.html', {
         'form': form,
     })
@@ -216,117 +441,84 @@ def employee_create(request):
 def employee_edit(request, employee_id):
     """Редактирование сотрудника"""
     employee = get_object_or_404(Employee, id=employee_id)
-
+    
     is_self = request.user.id == employee.id
-
-    # Проверка прав
-    if not (request.user.is_superuser or request.user.is_manager or is_self):
+    is_admin_or_manager = is_manager(request.user)
+    
+    if not is_admin_or_manager and not is_self:
         messages.error(request, 'У вас нет прав на редактирование!')
         return redirect('dashboard:home')
-
-    if is_self and not (request.user.is_superuser or request.user.is_manager):
-        if request.method == 'POST':
-            form = EmployeeSelfEditForm(
-                request.POST, request.FILES, instance=employee)
-        else:
-            form = EmployeeSelfEditForm(instance=employee)
-            # Явно передаём дату в правильном формате
-            if employee.birth_date:
-                form.initial['birth_date'] = employee.birth_date.strftime(
-                    '%Y-%m-%d')
+    
+    # Выбор формы в зависимости от прав
+    if is_self and not is_admin_or_manager:
+        form_class = EmployeeSelfEditForm
     else:
-        if request.method == 'POST':
-            form = EmployeeForm(request.POST, request.FILES, instance=employee)
-        else:
-            form = EmployeeForm(instance=employee)
-            if employee.birth_date:
-                form.initial['birth_date'] = employee.birth_date.strftime(
-                    '%Y-%m-%d')
-                
-    # Сотрудник может редактировать только свои данные
-    if is_self and not (request.user.is_superuser or request.user.is_manager):
-        # Ограничиваем поля для саморедактирования
-        if request.method == 'POST':
-            form = EmployeeSelfEditForm(
-                request.POST, request.FILES, instance=employee)
-        else:
-            form = EmployeeSelfEditForm(instance=employee)
+        form_class = EmployeeForm
+    
+    if request.method == 'POST':
+        form = form_class(request.POST, request.FILES, instance=employee)
+        if form.is_valid():
+            employee_obj = form.save(commit=False)
+            employee_obj._updated_by_user = request.user
+            employee_obj.save()
+            messages.success(request, f'Данные сотрудника {employee.full_name} успешно обновлены!')
+            return redirect('dashboard:employee_detail', employee_id=employee.id)
     else:
-        # Менеджер/суперпользователь могут редактировать всё
-        if request.method == 'POST':
-            form = EmployeeForm(request.POST, request.FILES, instance=employee)
-        else:
-            form = EmployeeForm(instance=employee)
-
-    if request.method == 'POST' and form.is_valid():
-        employee_obj = form.save(commit=False)
-        employee_obj._updated_by_user = request.user
-        employee_obj.save()
-        messages.success(
-            request, f'Данные сотрудника {employee.full_name} успешно обновлены!')
-        return redirect('dashboard:employee_detail', employee_id=employee.id)
-
-    # Подготовка initial данных для дат
-    if not request.method == 'POST':
+        form = form_class(instance=employee)
+        # Подготовка дат для формы
         if employee.birth_date:
-            form.initial['birth_date'] = employee.birth_date.strftime(
-                '%Y-%m-%d')
+            form.initial['birth_date'] = employee.birth_date.strftime('%Y-%m-%d')
         if employee.hire_date:
             form.initial['hire_date'] = employee.hire_date.strftime('%Y-%m-%d')
         if employee.dismissal_date:
-            form.initial['dismissal_date'] = employee.dismissal_date.strftime(
-                '%Y-%m-%d')
-
+            form.initial['dismissal_date'] = employee.dismissal_date.strftime('%Y-%m-%d')
+    
     return render(request, 'dashboard/employee_edit.html', {
         'form': form,
         'employee': employee,
         'is_self': is_self,
-        'can_edit': request.user.is_superuser or request.user.is_manager or is_self,
+        'can_edit': is_admin_or_manager or is_self,
     })
 
 
+# ============================================
+# КВАЛИФИКАЦИИ СОТРУДНИКА
+# ============================================
+
 @login_required
-@user_passes_test(is_manager)
+@manager_or_director_required
 def employee_skills(request, employee_id):
     """Управление квалификациями сотрудника"""
     employee = get_object_or_404(Employee, id=employee_id)
-
-    if not (request.user.is_superuser or request.user.is_manager):
-        messages.error(request, 'У вас нет прав на управление квалификациями!')
-        return redirect('dashboard:home')
-
+    
     employee_skills = employee.employee_skills.select_related('skill').all()
     existing_skill_ids = employee_skills.values_list('skill_id', flat=True)
     available_skills = Skill.objects.exclude(id__in=existing_skill_ids)
-
+    
     return render(request, 'dashboard/employee_skills.html', {
         'employee': employee,
         'employee_skills': employee_skills,
         'available_skills': available_skills,
-        'can_edit': request.user.is_superuser or request.user.is_manager,
+        'can_edit': is_manager(request.user),
     })
 
 
 @login_required
-@user_passes_test(is_manager)
+@manager_or_director_required
 def employee_skill_add(request, employee_id):
     """Добавление квалификации сотруднику"""
     employee = get_object_or_404(Employee, id=employee_id)
-
-    if not (request.user.is_superuser or request.user.is_manager):
-        messages.error(request, 'У вас нет прав на добавление квалификаций!')
-        return redirect('dashboard:home')
-
+    
     if request.method == 'POST':
         skill_id = request.POST.get('skill_id')
         level = request.POST.get('level')
-
+        
         if not skill_id:
             messages.error(request, 'Выберите навык')
             return redirect('dashboard:employee_skills', employee_id=employee.id)
-
+        
         skill = get_object_or_404(Skill, id=skill_id)
-
+        
         try:
             employee_skill = EmployeeSkill(
                 employee=employee,
@@ -334,84 +526,72 @@ def employee_skill_add(request, employee_id):
                 level=level or 'middle'
             )
             employee_skill.save()
-            messages.success(
-                request, f'Квалификация "{skill.name}" успешно добавлена!')
+            messages.success(request, f'Квалификация "{skill.name}" успешно добавлена!')
         except IntegrityError:
             messages.error(request, 'Эта квалификация уже есть у сотрудника')
-
+        
         return redirect('dashboard:employee_skills', employee_id=employee.id)
-
+    
     return redirect('dashboard:employee_skills', employee_id=employee.id)
 
 
 @login_required
-@user_passes_test(is_manager)
+@manager_or_director_required
 def employee_skill_delete(request, employee_id, skill_id):
     """Удаление квалификации у сотрудника"""
     employee = get_object_or_404(Employee, id=employee_id)
-
-    if not (request.user.is_superuser or request.user.is_manager):
-        messages.error(request, 'У вас нет прав на удаление квалификаций!')
-        return redirect('dashboard:home')
-
-    employee_skill = get_object_or_404(
-        EmployeeSkill, employee=employee, skill_id=skill_id)
+    employee_skill = get_object_or_404(EmployeeSkill, employee=employee, skill_id=skill_id)
     skill_name = employee_skill.skill.name
     employee_skill.delete()
-
     messages.success(request, f'Квалификация "{skill_name}" успешно удалена!')
     return redirect('dashboard:employee_skills', employee_id=employee.id)
 
 
+# ============================================
+# УЧАСТКИ СОТРУДНИКА
+# ============================================
+
 @login_required
-@user_passes_test(is_manager)
+@manager_or_director_required
 def employee_workstations(request, employee_id):
     """Управление участками сотрудника"""
     employee = get_object_or_404(Employee, id=employee_id)
-
-    if not (request.user.is_superuser or request.user.is_manager):
-        messages.error(request, 'У вас нет прав на управление участками!')
-        return redirect('dashboard:home')
-
-    assignments = employee.workstation_assignments.select_related(
-        'workstation').all()
-    existing_workstation_ids = assignments.values_list(
-        'workstation_id', flat=True)
+    
+    assignments = employee.workstation_assignments.select_related('workstation').all()
+    existing_workstation_ids = assignments.values_list('workstation_id', flat=True)
     available_workstations = Workstation.objects.filter(
-        is_active=True).exclude(id__in=existing_workstation_ids)
-
+        is_active=True
+    ).exclude(id__in=existing_workstation_ids)
+    
     return render(request, 'dashboard/employee_workstations.html', {
         'employee': employee,
         'assignments': assignments,
         'available_workstations': available_workstations,
-        'can_edit': request.user.is_superuser or request.user.is_manager,
+        'can_edit': is_manager(request.user),
     })
 
 
 @login_required
-@user_passes_test(is_manager)
+@manager_or_director_required
 def employee_workstation_add(request, employee_id):
     """Добавление назначения на участок"""
     employee = get_object_or_404(Employee, id=employee_id)
-
-    if not (request.user.is_superuser or request.user.is_manager):
-        messages.error(request, 'У вас нет прав на добавление участков!')
-        return redirect('dashboard:home')
-
+    
     if request.method == 'POST':
         workstation_id = request.POST.get('workstation_id')
         is_primary = request.POST.get('is_primary') == 'on'
-
+        
         if not workstation_id:
             messages.error(request, 'Выберите участок')
             return redirect('dashboard:employee_workstations', employee_id=employee.id)
-
+        
         workstation = get_object_or_404(Workstation, id=workstation_id)
-
+        
         if is_primary:
             EmployeeWorkstation.objects.filter(
-                employee=employee, is_primary=True).update(is_primary=False)
-
+                employee=employee, is_primary=True
+            ).update(is_primary=False)
+        
         try:
             assignment = EmployeeWorkstation(
                 employee=employee,
@@ -421,65 +601,75 @@ def employee_workstation_add(request, employee_id):
                 updated_by=request.user,
             )
             assignment.save()
-            messages.success(
-                request, f'Назначение на "{workstation.name}" успешно добавлено!')
+            messages.success(request, f'Назначение на "{workstation.name}" успешно добавлено!')
         except IntegrityError:
             messages.error(request, 'Этот участок уже назначен сотруднику')
-
+        
         return redirect('dashboard:employee_workstations', employee_id=employee.id)
-
+    
     return redirect('dashboard:employee_workstations', employee_id=employee.id)
 
 
 @login_required
-@user_passes_test(is_manager)
+@manager_or_director_required
 def employee_workstation_delete(request, employee_id, workstation_id):
     """Удаление назначения на участок"""
     employee = get_object_or_404(Employee, id=employee_id)
-
-    if not (request.user.is_superuser or request.user.is_manager):
-        messages.error(request, 'У вас нет прав на удаление участков!')
-        return redirect('dashboard:home')
-
-    assignment = get_object_or_404(
-        EmployeeWorkstation, employee=employee, workstation_id=workstation_id)
+    assignment = get_object_or_404(EmployeeWorkstation, employee=employee, workstation_id=workstation_id)
     workstation_name = assignment.workstation.name
     assignment.delete()
-
-    messages.success(
-        request, f'Назначение на "{workstation_name}" успешно удалено!')
+    messages.success(request, f'Назначение на "{workstation_name}" успешно удалено!')
     return redirect('dashboard:employee_workstations', employee_id=employee.id)
 
 
 @login_required
-@user_passes_test(is_manager)
+@manager_or_director_required
 def employee_workstation_set_primary(request, employee_id, workstation_id):
     """Установка основного участка"""
     employee = get_object_or_404(Employee, id=employee_id)
-
-    if not (request.user.is_superuser or request.user.is_manager):
-        messages.error(
-            request, 'У вас нет прав на изменение основного участка!')
-        return redirect('dashboard:home')
-
+    
     EmployeeWorkstation.objects.filter(
-        employee=employee, is_primary=True).update(is_primary=False)
-    assignment = get_object_or_404(
-        EmployeeWorkstation, employee=employee, workstation_id=workstation_id)
+        employee=employee, is_primary=True
+    ).update(is_primary=False)
+    
+    assignment = get_object_or_404(EmployeeWorkstation, employee=employee, workstation_id=workstation_id)
     assignment.is_primary = True
     assignment.updated_by = request.user
     assignment.save()
-
-    messages.success(
-        request, f'Участок "{assignment.workstation.name}" установлен как основной!')
+    
+    messages.success(request, f'Участок "{assignment.workstation.name}" установлен как основной!')
     return redirect('dashboard:employee_workstations', employee_id=employee.id)
 
 
 @login_required
-def home_redirect(request):
-    """Главная страница с редиректом в зависимости от роли"""
-    if request.user.is_superuser or request.user.is_manager:
-        return redirect('dashboard:attendance_calendar')
-    else:
-        # Обычный сотрудник → в мессенджер
-        return redirect('messenger:index')
+@manager_or_director_required
+def workstation_list(request):
+    """Список всех участков"""
+    from meta_app.workstations.models import Workstation
+    
+    # Получаем все активные участки с подразделениями
+    workstations = Workstation.objects.filter(is_active=True).select_related('department').order_by('department__name', 'name')
+    
+    # Фильтр по подразделению
+    department_id = request.GET.get('department')
+    if department_id:
+        workstations = workstations.filter(department_id=department_id)
+    
+    # Поиск
+    search = request.GET.get('search')
+    if search:
+        workstations = workstations.filter(
+            Q(name__icontains=search) |
+            Q(short_name__icontains=search) |
+            Q(department__name__icontains=search)
+        )
+    
+    # Список подразделений для фильтра
+    departments = Department.objects.filter(is_active=True)
+    
+    return render(request, 'dashboard/workstation_list.html', {
+        'workstations': workstations,
+        'departments': departments,
+        'selected_department': department_id,
+        'search': search,
+    })

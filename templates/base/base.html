@@ -4,11 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}MetaAdmin{% endblock %}</title>
+    
     <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    
     <!-- Bootstrap Icons -->
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css">
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    
     <!-- Мета-теги -->
     <meta name="yandex-verification" content="..." />
     <meta name="format-detection" content="telephone=no">
@@ -17,40 +20,69 @@
     <meta http-equiv="Expires" content="0">
     <meta name="browser-color" content="#0d6efd">
     <meta name="theme-color" content="#0d6efd">
+    
+    <!-- Fallback для иконок -->
     <style>
-        .bi { display: inline-block; font-family: 'Segoe UI', system-ui, sans-serif; }
-        .nav-link.active { font-weight: 600; }
+        .bi { 
+            display: inline-block; 
+            font-family: 'Segoe UI', system-ui, sans-serif; 
+        }
+        .nav-link.active { 
+            font-weight: 600; 
+        }
     </style>
+    
+    <!-- ===== БЛОК ДЛЯ КАСТОМНЫХ CSS ===== -->
     {% block extra_css %}{% endblock %}
 </head>
 <body>
+    <!-- ============================================
+         НАВИГАЦИЯ
+         ============================================ -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
         <div class="container">
-            <a class="navbar-brand" href="{% if user.is_superuser or user.is_manager %}{% url 'dashboard:home' %}{% else %}{% url 'messenger:index' %}{% endif %}">
+            <!-- Бренд -->
+            <a class="navbar-brand" href="{% if user.is_authenticated and user.is_director %}{% url 'dashboard:director_dashboard' %}{% elif user.is_authenticated and user.is_manager %}{% url 'dashboard:home' %}{% else %}{% url 'messenger:index' %}{% endif %}">
                 <i class="bi bi-person-badge"></i> MetaAdmin
             </a>
+            
+            <!-- Кнопка-гамбургер -->
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
+            
+            <!-- Меню -->
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav me-auto">
                     {% if user.is_authenticated %}
-                        {% if user.is_superuser or user.is_manager %}
-                            <!-- ===== META VOICE (МЕССЕНДЖЕР) ===== -->
+                        <!-- ============================================
+                             ДИРЕКТОР
+                             ============================================ -->
+                        {% if user.is_director or user.role == 'deputy' %}
+                            <!-- Дашборд директора -->
                             <li class="nav-item">
-                                <a class="nav-link {% if '/messenger/' in request.path %}active{% endif %}" href="{% url 'messenger:index' %}">
+                                <a class="nav-link {% if '/director/' in request.path %}active{% endif %}" 
+                                   href="{% url 'dashboard:director_dashboard' %}">
+                                    <i class="bi bi-speedometer2"></i> Дашборд
+                                </a>
+                            </li>
+                            
+                            <!-- MetaVoice -->
+                            <li class="nav-item">
+                                <a class="nav-link {% if '/messenger/' in request.path %}active{% endif %}" 
+                                   href="{% url 'messenger:index' %}">
                                     <i class="bi bi-chat-dots"></i> MetaVoice
                                 </a>
                             </li>
-
-                            <!-- ===== СОТРУДНИКИ (с подменю) ===== -->
+                            
+                            <!-- Сотрудники (выпадающее меню) -->
                             <li class="nav-item dropdown">
-                                <a class="nav-link dropdown-toggle {% if '/employees/' in request.path or '/attendance/' in request.path or '/calendar' in request.path or '/reports/' in request.path or '/norms/' in request.path or '/vacations/' in request.path %}active{% endif %}" 
+                                <a class="nav-link dropdown-toggle {% if '/employees/' in request.path or '/attendance/' in request.path or '/calendar' in request.path or '/reports/' in request.path or '/norms/' in request.path or '/vacations/' in request.path or '/departments/' in request.path %}active{% endif %}" 
                                    href="#" id="employeeDropdown" role="button" data-bs-toggle="dropdown">
                                     <i class="bi bi-people-fill"></i> Сотрудники
                                 </a>
                                 <ul class="dropdown-menu" aria-labelledby="employeeDropdown">
-                                    <!-- Учет времени -->
+                                    <!-- Учёт времени -->
                                     <li><a class="dropdown-item" href="{% url 'dashboard:home' %}">
                                         <i class="bi bi-calendar3"></i> Календарь
                                     </a></li>
@@ -61,6 +93,7 @@
                                         <i class="bi bi-list-ul"></i> Все записи
                                     </a></li>
                                     <li><hr class="dropdown-divider"></li>
+                                    
                                     <!-- Сотрудники -->
                                     <li><a class="dropdown-item" href="{% url 'dashboard:employee_list' %}">
                                         <i class="bi bi-person"></i> Список сотрудников
@@ -69,6 +102,7 @@
                                         <i class="bi bi-person-add"></i> Добавить сотрудника
                                     </a></li>
                                     <li><hr class="dropdown-divider"></li>
+                                    
                                     <!-- Отпуска -->
                                     <li><a class="dropdown-item" href="{% url 'dashboard:vacation_list' %}">
                                         <i class="bi bi-calendar-check"></i> Отпуска
@@ -77,7 +111,73 @@
                                         {% endif %}
                                     </a></li>
                                     <li><hr class="dropdown-divider"></li>
-                                    <!-- Отчеты -->
+                                    
+                                    <!-- Отчёты -->
+                                    <li><a class="dropdown-item" href="{% url 'dashboard:report_hours' %}">
+                                        <i class="bi bi-clock"></i> Отработанные часы
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'dashboard:norm_bulk_edit' %}">
+                                        <i class="bi bi-calendar"></i> Нормы часов
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    
+                                    <!-- Подразделения -->
+                                    <li><a class="dropdown-item" href="{% url 'dashboard:department_list' %}">
+                                        <i class="bi bi-diagram-3"></i> Подразделения
+                                    </a></li>
+                                </ul>
+                            </li>
+
+                        <!-- ============================================
+                             МЕНЕДЖЕР
+                             ============================================ -->
+                        {% elif user.is_manager %}
+                            <!-- MetaVoice -->
+                            <li class="nav-item">
+                                <a class="nav-link {% if '/messenger/' in request.path %}active{% endif %}" 
+                                   href="{% url 'messenger:index' %}">
+                                    <i class="bi bi-chat-dots"></i> MetaVoice
+                                </a>
+                            </li>
+                            
+                            <!-- Сотрудники (выпадающее меню) -->
+                            <li class="nav-item dropdown">
+                                <a class="nav-link dropdown-toggle {% if '/employees/' in request.path or '/attendance/' in request.path or '/calendar' in request.path or '/reports/' in request.path or '/norms/' in request.path or '/vacations/' in request.path %}active{% endif %}" 
+                                   href="#" id="employeeDropdown" role="button" data-bs-toggle="dropdown">
+                                    <i class="bi bi-people-fill"></i> Сотрудники
+                                </a>
+                                <ul class="dropdown-menu" aria-labelledby="employeeDropdown">
+                                    <!-- Учёт времени -->
+                                    <li><a class="dropdown-item" href="{% url 'dashboard:home' %}">
+                                        <i class="bi bi-calendar3"></i> Календарь
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'dashboard:attendance_today' %}">
+                                        <i class="bi bi-calendar-day"></i> Сегодня
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'dashboard:attendance_all' %}">
+                                        <i class="bi bi-list-ul"></i> Все записи
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    
+                                    <!-- Сотрудники -->
+                                    <li><a class="dropdown-item" href="{% url 'dashboard:employee_list' %}">
+                                        <i class="bi bi-person"></i> Список сотрудников
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'dashboard:employee_create' %}">
+                                        <i class="bi bi-person-add"></i> Добавить сотрудника
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    
+                                    <!-- Отпуска -->
+                                    <li><a class="dropdown-item" href="{% url 'dashboard:vacation_list' %}">
+                                        <i class="bi bi-calendar-check"></i> Отпуска
+                                        {% if pending_vacations_count > 0 %}
+                                            <span class="badge bg-danger ms-1">{{ pending_vacations_count }}</span>
+                                        {% endif %}
+                                    </a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                    
+                                    <!-- Отчёты -->
                                     <li><a class="dropdown-item" href="{% url 'dashboard:report_hours' %}">
                                         <i class="bi bi-clock"></i> Отработанные часы
                                     </a></li>
@@ -86,15 +186,20 @@
                                     </a></li>
                                 </ul>
                             </li>
+
+                        <!-- ============================================
+                             ОБЫЧНЫЙ СОТРУДНИК
+                             ============================================ -->
                         {% else %}
-                            <!-- ===== ОБЫЧНЫЕ СОТРУДНИКИ ===== -->
-                            <!-- Только MetaVoice -->
+                            <!-- MetaVoice -->
                             <li class="nav-item">
-                                <a class="nav-link {% if '/messenger/' in request.path %}active{% endif %}" href="{% url 'messenger:index' %}">
+                                <a class="nav-link {% if '/messenger/' in request.path %}active{% endif %}" 
+                                   href="{% url 'messenger:index' %}">
                                     <i class="bi bi-chat-dots"></i> MetaVoice
                                 </a>
                             </li>
-                            <!-- Отпуска (свои) -->
+                            
+                            <!-- Мои отпуска -->
                             <li class="nav-item">
                                 <a class="nav-link" href="{% url 'dashboard:vacation_list' %}">
                                     <i class="bi bi-calendar-check"></i> Мои отпуска
@@ -104,14 +209,20 @@
                     {% endif %}
                 </ul>
                 
-                <!-- Правая часть навигации -->
+                <!-- ============================================
+                     ПРАВАЯ ЧАСТЬ НАВИГАЦИИ
+                     ============================================ -->
                 <ul class="navbar-nav ms-auto">
                     {% if user.is_authenticated %}
+                        <!-- Имя пользователя -->
                         <li class="nav-item">
                             <a class="nav-link text-light" href="{% url 'dashboard:employee_detail' user.id %}">
                                 <i class="bi bi-person-circle"></i> {{ user.full_name }}
+                                <span class="badge bg-secondary ms-1">{{ user.get_role_display|default:user.role }}</span>
                             </a>
                         </li>
+                        
+                        <!-- Админка (только суперпользователь) -->
                         {% if user.is_superuser %}
                             <li class="nav-item">
                                 <a class="nav-link" href="/admin/">
@@ -119,12 +230,15 @@
                                 </a>
                             </li>
                         {% endif %}
+                        
+                        <!-- Выход -->
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'dashboard:logout' %}">
                                 <i class="bi bi-box-arrow-right"></i> Выйти
                             </a>
                         </li>
                     {% else %}
+                        <!-- Вход -->
                         <li class="nav-item">
                             <a class="nav-link" href="{% url 'dashboard:login' %}">
                                 <i class="bi bi-box-arrow-in-right"></i> Войти
@@ -136,12 +250,17 @@
         </div>
     </nav>
 
+    <!-- ============================================
+         ОСНОВНОЙ КОНТЕНТ
+         ============================================ -->
     <div class="container mt-4">
         {% block content %}
         {% endblock %}
     </div>
 
-    <!-- СООБЩЕНИЯ -->
+    <!-- ============================================
+         СООБЩЕНИЯ (TOAST)
+         ============================================ -->
     {% if messages %}
     <div class="toast-container position-fixed bottom-0 end-0 p-3" style="z-index: 9999;">
         {% for message in messages %}
@@ -170,9 +289,17 @@
     </div>
     {% endif %}
 
+    <!-- ============================================
+         СКРИПТЫ
+         ============================================ -->
+    <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- ===== БЛОК ДЛЯ КАСТОМНЫХ JS ===== -->
+    {% block extra_js %}{% endblock %}
+
+    <!-- WebSocket для обновлений -->
     <script>
-        // WebSocket для получения обновлений
         let socket;
 
         function connectWebSocket() {

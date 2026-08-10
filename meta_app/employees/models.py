@@ -49,6 +49,7 @@ class Employee(AbstractUser):
     
     objects = EmployeeManager()
 
+    
     # Убираем ненужные поля от AbstractUser
     username = None
     first_name = None
@@ -70,7 +71,6 @@ class Employee(AbstractUser):
         unique=True,
         verbose_name='Табельный номер'
     )
-
     card_number = models.CharField(
         max_length=50,
         unique=True,
@@ -78,23 +78,41 @@ class Employee(AbstractUser):
         null=True,
         verbose_name='Номер карточки'
     )
-    
+    department = models.ForeignKey(
+        'workstations.Department',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='employees',
+        verbose_name='Подразделение'
+    )
+    ROLE_CHOICE = [
+        ('employee', 'Сотрудник'),
+        ('manager', 'Менеджер'),
+        ('director', 'Директор'),
+        ('deputy', 'Заместитель'),
+    ]
+    role = models.CharField(
+        max_length=20,
+        choices=ROLE_CHOICE,
+        default='employee',
+        verbose_name='Роль'
+    )
     base_salary = models.DecimalField(
         max_digits=10,
         decimal_places=2,
         default=0.0,
         verbose_name='Базовый оклад (руб.)'
     )
-
     is_active = models.BooleanField(
         default=True,
         verbose_name='Работает'
     )
-    is_manager = models.BooleanField(
-        default=False,
-        verbose_name='Может редактировать данные'
-    )
-
+    # is_manager = models.BooleanField(
+    #     default=False,
+    #     verbose_name='Может редактировать данные'
+    # )
+    
     # Личные данные
     last_name = models.CharField(
         max_length=100,
@@ -243,8 +261,13 @@ class Employee(AbstractUser):
 
     # Поле для аутентификации (вход по логину)
     USERNAME_FIELD = 'login'
-    REQUIRED_FIELDS = ['employee_id', 'last_name',
-                       'first_name', 'birth_date', 'hire_date']
+    REQUIRED_FIELDS = [
+        'employee_id', 
+        'last_name',
+        'first_name', 
+        'birth_date', 
+        'hire_date'
+    ]
     
     groups = models.ManyToManyField(
         'auth.Group',
@@ -275,7 +298,13 @@ class Employee(AbstractUser):
 
         if hasattr(self, '_updated_by_user'):
             self.updated_by = self._updated_by_user
-
+            
+        # Синхронизация is_manager с role
+        # if self.role in ['manager', 'director', 'deputy']:
+        #     self.is_manager = True
+        # else:
+        #     self.is_manager = False
+        
         super().save(*args, **kwargs)
         
     def is_active_in_month(self, year, month):
@@ -364,6 +393,14 @@ class Employee(AbstractUser):
         if months:
             parts.append(f"{months} {'месяц' if months == 1 else 'месяца' if months < 5 else 'месяцев'}")
         return " ".join(parts) or "Меньше месяца"
+    
+    @property
+    def is_manager(self):
+        return self.role in ['manager', 'director', 'deputy']
+    
+    @property
+    def is_director(self):
+        return self.role == 'director'
         
 
 class Skill(models.Model):

@@ -17,6 +17,7 @@ class EmployeeForm(forms.ModelForm):
             'birth_date',
             'phone_number',
             'photo',
+            'department',
             'registration_address',
             'residence_address',
             'marital_status',
@@ -38,6 +39,7 @@ class EmployeeForm(forms.ModelForm):
             'phone_number': forms.TextInput(attrs={'class': 'form-control'}),
             'hire_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
             'dismissal_date': forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
+            'department': forms.Select(attrs={'class': 'form-control'}),
             'registration_address': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
             'residence_address': forms.Textarea(attrs={'rows': 3, 'class': 'form-control'}),
             'previous_work_1': forms.Textarea(attrs={'rows': 2, 'class': 'form-control'}),
@@ -81,6 +83,7 @@ class EmployeeForm(forms.ModelForm):
             'previous_work_3': 'Предыдущее место работы 3',
             'hire_date': 'Дата приема',
             'dismissal_date': 'Дата увольнения',
+            'department': 'Подразделение',
             'is_active': 'Работает',
         }
 

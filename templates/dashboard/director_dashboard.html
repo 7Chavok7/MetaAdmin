@@ -1,0 +1,193 @@
+{% extends 'base/base.html' %}
+{% load static %}
+
+{% block title %}Дашборд директора - MetaAdmin{% endblock %}
+
+{% block extra_css %}
+    <link rel="stylesheet" href="{% static 'dashboard/css/director_dashboard.css' %}?v=1">
+{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-speedometer2 text-primary"></i> Дашборд директора</h1>
+    <div>
+        <span class="badge bg-primary badge-stat">
+            <i class="bi bi-calendar3"></i> {{ today|date:"d.m.Y" }}
+        </span>
+        <span class="badge bg-info text-dark badge-stat">
+            <i class="bi bi-clock"></i> {{ current_time|time:"H:i" }}
+        </span>
+    </div>
+</div>
+
+<!-- Статистика -->
+<div class="row g-4 mb-4">
+    <div class="col-xl-3 col-md-6">
+        <a href="{% url 'dashboard:employee_list' %}" class="text-decoration-none">
+            <div class="card stat-card shadow-sm bg-primary bg-opacity-10 h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Сотрудников</h6>
+                            <h2 class="mb-0 text-primary">{{ total_employees }}</h2>
+                            <small class="text-muted">активных</small>
+                        </div>
+                        <div class="stat-icon text-primary">
+                            <i class="bi bi-people"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <a href="{% url 'dashboard:department_list' %}" class="text-decoration-none">
+            <div class="card stat-card shadow-sm bg-success bg-opacity-10 h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Подразделений</h6>
+                            <h2 class="mb-0 text-success">{{ total_departments }}</h2>
+                            <small class="text-muted">всего</small>
+                        </div>
+                        <div class="stat-icon text-success">
+                            <i class="bi bi-diagram-3"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <a href="{% url 'dashboard:workstation_list' %}" class="text-decoration-none">
+            <div class="card stat-card shadow-sm bg-warning bg-opacity-10 h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">Участков</h6>
+                            <h2 class="mb-0 text-warning">{{ total_workstations }}</h2>
+                            <small class="text-muted">активных</small>
+                        </div>
+                        <div class="stat-icon text-warning">
+                            <i class="bi bi-gear"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+    <div class="col-xl-3 col-md-6">
+        <a href="{% url 'dashboard:attendance_calendar' %}" class="text-decoration-none">
+            <div class="card stat-card shadow-sm bg-info bg-opacity-10 h-100">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="text-muted mb-1">На работе</h6>
+                            <h2 class="mb-0 text-info">{{ today_attendance.present }}</h2>
+                            <small class="text-muted">из {{ today_attendance.total }}</small>
+                            {% if today_attendance.total > 0 %}
+                            <br><small class="text-muted">{{ today_attendance.percent }}%</small>
+                            {% endif %}
+                        </div>
+                        <div class="stat-icon text-info">
+                            <i class="bi bi-person-check"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<!-- Основной контент -->
+<div class="row g-4">
+    <!-- Левая колонка: Оргструктура -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                <h5 class="mb-0"><i class="bi bi-diagram-3"></i> Оргструктура</h5>
+                <a href="{% url 'dashboard:department_create' %}" class="btn btn-light btn-sm">
+                    <i class="bi bi-plus"></i> Добавить
+                </a>
+            </div>
+            <div class="card-body">
+                {% if departments %}
+                <ul class="department-tree">
+                    {% for dept in departments %}
+                    <li>
+                        <span class="dept-name" onclick="toggleDepartment(this)">
+                            <i class="bi bi-folder"></i> {{ dept.name }}
+                            <small class="text-muted">({{ dept.code }})</small>
+                        </span>
+                        {% if dept.children.exists %}
+                        <ul>
+                            {% for child in dept.children.all %}
+                            <li>
+                                <span class="dept-name" onclick="toggleDepartment(this)">
+                                    <i class="bi bi-folder"></i> {{ child.name }}
+                                    <small class="text-muted">({{ child.code }})</small>
+                                </span>
+                                <span class="ms-2">
+                                    <a href="{% url 'dashboard:department_edit' child.id %}" class="text-secondary" title="Редактировать">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                </span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                {% if employees_without_dept > 0 %}
+                <hr>
+                <div class="alert alert-warning py-2 mb-0">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <a href="{% url 'dashboard:employee_list' %}?status=no_department" class="alert-link">
+                        {{ employees_without_dept }} сотрудников без подразделения
+                    </a>
+                </div>
+                {% endif %}
+                {% else %}
+                <p class="text-muted">Подразделений пока нет</p>
+                <a href="{% url 'dashboard:department_create' %}" class="btn btn-primary btn-sm">
+                    <i class="bi bi-plus"></i> Создать первое подразделение
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Правая колонка: Сотрудники и быстрые действия -->
+    <div class="col-lg-8">
+        <div class="row g-4">
+            
+            <!-- Быстрые действия -->
+            <div class="col-12">
+                <div class="card shadow-sm">
+                    <div class="card-header bg-secondary text-white">
+                        <h5 class="mb-0"><i class="bi bi-lightning"></i> Быстрые действия</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="{% url 'dashboard:employee_create' %}" class="btn btn-success quick-action-btn">
+                                <i class="bi bi-person-plus"></i> Добавить сотрудника
+                            </a>
+                            <a href="{% url 'dashboard:department_create' %}" class="btn btn-primary quick-action-btn">
+                                <i class="bi bi-diagram-3"></i> Добавить подразделение
+                            </a>
+                            <a href="{% url 'dashboard:report_hours' %}" class="btn btn-warning text-dark quick-action-btn">
+                                <i class="bi bi-bar-chart"></i> Отчёты
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+    <script src="{% static 'dashboard/js/director_dashboard.js' %}?v=1"></script>
+{% endblock %}

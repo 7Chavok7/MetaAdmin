@@ -42,6 +42,7 @@ urlpatterns = [
           views.employee_workstation_delete, name='employee_workstation_delete'),
      path('employees/<int:employee_id>/workstations/<int:workstation_id>/set-primary/',
           views.employee_workstation_set_primary, name='employee_workstation_set_primary'),
+     path('workstations/', views.workstation_list, name='workstation_list'),
 
      # Учет времени
      path('attendance/', attendance_views.attendance_today, name='attendance_today'),
@@ -62,15 +63,24 @@ urlpatterns = [
      path('norms/fill/', attendance_views.norm_fill, name='norm_fill'),
      path('norms/bulk-edit/', attendance_views.norm_bulk_edit, name='norm_bulk_edit'),
      
+      # Дашборд директора
+     path('director/', views.director_dashboard, name='director_dashboard'),
+     
+     # Управление подразделениями
+     path('departments/', views.department_list, name='department_list'),
+     path('departments/create/', views.department_create, name='department_create'),
+     path('departments/<int:department_id>/edit/', views.department_edit, name='department_edit'),
+     path('departments/<int:department_id>/delete/', views.department_delete, name='department_delete'),
+          
      # Отпуска
-    path('vacations/', attendance_views.vacation_list, name='vacation_list'),
-    path('vacations/create/', attendance_views.vacation_create,
-         name='vacation_create'),
-    path('vacations/process/<int:vacation_id>/',
-         attendance_views.vacation_process, name='vacation_process'),
-    path('vacations/cancel/<int:vacation_id>/',
-         attendance_views.vacation_cancel, name='vacation_cancel'),
-    
-    # Мессенджер
-    path('messenger/', include('meta_app.messenger.urls')),
+     path('vacations/', attendance_views.vacation_list, name='vacation_list'),
+     path('vacations/create/', attendance_views.vacation_create,
+          name='vacation_create'),
+     path('vacations/process/<int:vacation_id>/',
+          attendance_views.vacation_process, name='vacation_process'),
+     path('vacations/cancel/<int:vacation_id>/',
+          attendance_views.vacation_cancel, name='vacation_cancel'),
+     
+     # Мессенджер
+     path('messenger/', include('meta_app.messenger.urls')),
 ]

@@ -84,9 +84,9 @@
                     </div>
                 </div>     
                 <hr>       
-                {% comment %} <div class="card-header">
+                <!--<div class="card-header">
                     <h5 class="mb-0"><i class="bi bi-person-vcard"></i> Анкетные данные</h5>
-                </div> {% endcomment %}
+                </div>-->
                 <!--Дата приема и увольнения-->
                 <div class="row">
                     <div class="col-md-6">
@@ -101,6 +101,21 @@
                             {% else %}
                             <div class="text-muted">Стаж: <b>{{ employee.experience_display }}</b></div>
                             {% endif %}
+                        </div>
+                    </div>
+                    <!-- Подразделение -->
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <div class="text-muted">
+                                Подразделение: 
+                                <b>
+                                    {% if employee.department %}
+                                        {{ employee.department.name }}
+                                    {% else %}
+                                        <span class="text-danger">Не назначено</span>
+                                    {% endif %}
+                                </b>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -307,18 +322,75 @@
                         </a>
                         {% endif %}
                     </div>
-                    <div class="card-body">
+                    <div class="card-body p-0">
                         {% if skills %}
-                        <div class="d-flex flex-wrap gap-2">
-                            {% for skill in skills %}
-                            <span class="badge bg-primary p-2" style="font-size: 14px;">
-                                {{ skill.skill.name }}
-                                <span class="badge bg-light text-dark ms-1">{{ skill.get_level_display }}</span>
-                            </span>
-                            {% endfor %}
+                        <div class="table-responsive">
+                            <table class="table table-hover mb-0" style="font-size: 13px;">
+                                <thead class="table-light">
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Навык</th>
+                                        <th>Категория</th>
+                                        <th class="text-center">Уровень</th>
+                                        <!--<th class="text-center">Дата получения</th>-->
+                                        {% if can_edit %}
+                                        <th class="text-center">Действия</th>
+                                        {% endif %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for skill in skills %}
+                                    <tr>
+                                        <td>{{ forloop.counter }}</td>
+                                        <td>
+                                            <strong>{{ skill.skill.name }}</strong>
+                                        </td>
+                                        <td>
+                                            <span class="badge 
+                                                {% if skill.skill.category == 'production' %}bg-info
+                                                {% elif skill.skill.category == 'warehouse' %}bg-warning text-dark
+                                                {% elif skill.skill.category == 'office' %}bg-secondary
+                                                {% else %}bg-primary{% endif %}">
+                                                {{ skill.skill.get_category_display }}
+                                            </span>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge 
+                                                {% if skill.level == 'expert' %}bg-success
+                                                {% elif skill.level == 'middle' %}bg-warning text-dark
+                                                {% else %}bg-secondary{% endif %}">
+                                                {{ skill.get_level_display }}
+                                            </span>
+                                        </td>
+                                        <!--<td class="text-center">
+                                            <small class="text-muted">{{ skill.certified_date|date:"d.m.Y" }}</small>
+                                        </td>-->
+                                        {% if can_edit %}
+                                        <td class="text-center">
+                                            <a href="{% url 'dashboard:employee_skill_delete' employee.id skill.skill.id %}" 
+                                            class="btn btn-outline-danger btn-sm"
+                                            onclick="return confirm('Удалить квалификацию {{ skill.skill.name }}?')"
+                                            title="Удалить">
+                                                <i class="bi bi-trash"></i>
+                                            </a>
+                                        </td>
+                                        {% endif %}
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                                <tfoot class="table-light fw-bold">
+                                    <tr>
+                                        <td colspan="2">Итого:</td>
+                                        <td class="text-center">{{ skills|length }} навыков</td>
+                                        <td colspan="{% if can_edit %}3{% else %}2{% endif %}"></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
                         </div>
                         {% else %}
-                        <p class="text-muted">Квалификации не указаны</p>
+                        <div class="card-body">
+                            <p class="text-muted">Квалификации не указаны</p>
+                        </div>
                         {% endif %}
                     </div>
                 </div>
@@ -384,82 +456,99 @@
                 </div>
                 </div>
 
-                <!-- Последние записи -->
+                <!-- Последние записи (сворачиваемый) -->
                 <div class="card shadow-sm mt-3">
-                    <div class="card-header bg-secondary text-white">
+                    <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center"
+                        style="cursor: pointer;"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#lastRecords"
+                        aria-expanded="true"
+                        aria-controls="lastRecords">
                         <h5 class="mb-0"><i class="bi bi-clock"></i> Последние записи</h5>
+                        <span class="badge bg-light text-dark">
+                            <i class="bi bi-chevron-down"></i>
+                        </span>
                     </div>
-                    <div class="card-body p-0">
-                        {% if attendances %}
-                        <div class="table-responsive">
-                            <table class="table table-sm mb-0">
-                                <thead class="table-light">
-                                    <tr>
-                                        <th>Дата</th>
-                                        <th>Участок</th>
-                                        <th>Начало</th>
-                                        <th>Конец</th>
-                                        <th>Часы</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for attendance in attendances %}
-                                    <tr>
-                                        <td>{{ attendance.record_date|date:"d.m.Y" }}</td>
-                                        <td>{{ attendance.workstation.name|default:"—" }}</td>
-                                        <td>{{ attendance.start_time|time:"H:i"|default:"—" }}</td>
-                                        <td>{{ attendance.end_time|time:"H:i"|default:"—" }}</td>
-                                        <td>
-                                            {{ attendance.actual_hours|floatformat:1 }} ч.
-                                            {% if attendance.overtime_hours %}
-                                            <span class="badge bg-warning">+{{ attendance.overtime_hours|floatformat:1 }}</span>
-                                            {% endif %}
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                    <div class="collapse" id="lastRecords">
+                        <div class="card-body p-0">
+                            {% if attendances %}
+                            <div class="table-responsive">
+                                <table class="table table-sm mb-0">
+                                    <thead class="table-light">
+                                        <tr>
+                                            <th>Дата</th>
+                                            <th>Участок</th>
+                                            <th>Начало</th>
+                                            <th>Конец</th>
+                                            <th>Часы</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for attendance in attendances %}
+                                        <tr>
+                                            <td>{{ attendance.record_date|date:"d.m.Y" }}</td>
+                                            <td>{{ attendance.workstation.name|default:"—" }}</td>
+                                            <td>{{ attendance.start_time|time:"H:i"|default:"—" }}</td>
+                                            <td>{{ attendance.end_time|time:"H:i"|default:"—" }}</td>
+                                            <td>
+                                                {{ attendance.actual_hours|floatformat:1 }} ч.
+                                                {% if attendance.overtime_hours %}
+                                                <span class="badge bg-warning">+{{ attendance.overtime_hours|floatformat:1 }}</span>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <div class="card-body">
+                                <p class="text-muted">Записей о работе пока нет</p>
+                            </div>
+                            {% endif %}
                         </div>
-                        {% else %}
-                        <div class="card-body">
-                            <p class="text-muted">Записей о работе пока нет</p>
-                        </div>
-                        {% endif %}
                     </div>
                 </div>
 
 
 
-                <!-- Аудит -->
+                <!-- История изменений (сворачиваемый) -->
                 <div class="card shadow-sm mt-3">
-                    <div class="card-body">
-                        <div class="row">
-                            <div class="col-12"><div class="card-header bg-secondary text-white">
-                                <h5 class="mb-0"><i class="bi bi-clock"></i> История изменений</h5>
-                            </div>
-                                <dl>
-                                    <dt class="text-muted">Создал</dt>
-                                    <dd>
-                                        {% if employee.created_by %}
-                                        {{ employee.created_by.full_name }}
-                                        {% else %}
-                                        Система
-                                        {% endif %}
-                                        <small class="text-muted">({{ employee.created_at|date:"d.m.y H:i" }})</small>
-                                    </dd>
-                                    
-                                    <dt class="text-muted">Последнее изменение</dt>
-                                    <dd>
-                                        {% if employee.updated_by %}
-                                        {{ employee.updated_by.full_name }}
-                                        {% else %}
-                                        Не редактировался
-                                        {% endif %}
-                                        <small class="text-muted">({{ employee.updated_at|date:"d.m.y H:i" }})</small>
-                                    </dd>
-                                </dl>
-                            </div>
-                        </div>    
+                    <div class="card-header bg-secondary text-white d-flex justify-content-between align-items-center"
+                        style="cursor: pointer;"
+                        data-bs-toggle="collapse"
+                        data-bs-target="#auditHistory"
+                        aria-expanded="true"
+                        aria-controls="auditHistory">
+                        <h5 class="mb-0"><i class="bi bi-clock-history"></i> История изменений</h5>
+                        <span class="badge bg-light text-dark">
+                            <i class="bi bi-chevron-down"></i>
+                        </span>
+                    </div>
+                    <div class="collapse" id="auditHistory">
+                        <div class="card-body">
+                            <dl class="mb-0">
+                                <dt class="text-muted">Создал</dt>
+                                <dd>
+                                    {% if employee.created_by %}
+                                    {{ employee.created_by.full_name }}
+                                    {% else %}
+                                    Система
+                                    {% endif %}
+                                    <small class="text-muted">({{ employee.created_at|date:"d.m.y H:i" }})</small>
+                                </dd>
+                                
+                                <dt class="text-muted mt-2">Последнее изменение</dt>
+                                <dd>
+                                    {% if employee.updated_by %}
+                                    {{ employee.updated_by.full_name }}
+                                    {% else %}
+                                    Не редактировался
+                                    {% endif %}
+                                    <small class="text-muted">({{ employee.updated_at|date:"d.m.y H:i" }})</small>
+                                </dd>
+                            </dl>
+                        </div>
                     </div>
                 </div>
             </div>

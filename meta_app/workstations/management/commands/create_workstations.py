@@ -1,77 +1,59 @@
 from django.core.management.base import BaseCommand
-from meta_app.workstations.models import Workstation
+from meta_app.workstations.models import Workstation, Department
 
 
 class Command(BaseCommand):
-    help = 'Создает начальные участки'
+    help = 'Миграция существующих участков в новую структуру подразделений'
 
     def handle(self, *args, **options):
-        workstations_data = [
-            {
-                'name': 'ЧПУ Фрезер',
-                'short_name': 'Фрез',
-                'schedule_type': '5_2',
-                'work_start': '08:00',
-                'work_end': '17:00',
-                'hours_per_day': 8,
-                'color': '#007bff'
-            },
-            {
-                'name': 'ЧПУ Лазер',
-                'short_name': 'Лаз',
-                'schedule_type': '5_2',
-                'work_start': '08:00',
-                'work_end': '17:00',
-                'hours_per_day': 8,
-                'color': '#28a745'
-            },
-            {
-                'name': 'Постобработка',
-                'short_name': 'Пост',
-                'schedule_type': '5_2',
-                'work_start': '08:00',
-                'work_end': '17:00',
-                'hours_per_day': 8,
-                'color': '#17a2b8'
-            },
-            {
-                'name': 'МетаСборка',
-                'short_name': 'СбМ',
-                'schedule_type': '5_2',
-                'work_start': '08:00',
-                'work_end': '17:00',
-                'hours_per_day': 8,
-                'color': '#ffc107'
-            },
-            {
-                'name': 'Склад',
-                'short_name': 'Склад',
-                'schedule_type': '5_2',
-                'work_start': '08:00',
-                'work_end': '17:00',
-                'hours_per_day': 8,
-                'color': '#fd7e14'
-            },
-            {
-                'name': 'Офис',
-                'short_name': 'Офис',
-                'schedule_type': '5_2',
-                'work_start': '09:00',
-                'work_end': '18:00',
-                'hours_per_day': 8,
-                'color': '#6f42c1'
-            },
-        ]
+        # 1. Создаём подразделения
+        production, _ = Department.objects.get_or_create(
+            code='PROD',
+            defaults={'name': 'Производство', 'order': 1}
+        )
+        office, _ = Department.objects.get_or_create(
+            code='OFFICE',
+            defaults={'name': 'Офис', 'order': 2}
+        )
+        warehouse, _ = Department.objects.get_or_create(
+            code='WAREHOUSE',
+            defaults={'name': 'Склад', 'order': 3}
+        )
 
-        for ws_data in workstations_data:
-            workstation, created = Workstation.objects.get_or_create(
-                name=ws_data['name'],
-                defaults=ws_data
-            )
-            if created:
-                self.stdout.write(f"✅ Создан участок: {workstation.name}")
+        # 2. Создаём подразделения внутри Производства
+        meta_cut, _ = Department.objects.get_or_create(
+            code='META_CUT',
+            defaults={'name': 'Мета резка', 'parent': production, 'order': 1}
+        )
+        meta_assembly, _ = Department.objects.get_or_create(
+            code='META_ASSEMBLY',
+            defaults={'name': 'Мета сборка', 'parent': production, 'order': 2}
+        )
+        meta_letter, _ = Department.objects.get_or_create(
+            code='META_LETTER',
+            defaults={'name': 'Мета Буква', 'parent': production, 'order': 3}
+        )
+
+        # 3. Связываем существующие участки с новыми подразделениями
+        # Сопоставляем по названию или сокращению
+        workstation_map = {
+            'ЧПУ Фрезер': meta_cut,
+            'ЧПУ Лазер': meta_cut,
+            'Постобработка': meta_assembly,
+            'МетаСборка': meta_assembly,
+            'Склад': warehouse,
+            'Офис': office,
+        }
+
+        updated_count = 0
+        for ws_name, department in workstation_map.items():
+            workstation = Workstation.objects.filter(name=ws_name).first()
+            if workstation:
+                workstation.department = department
+                workstation.save()
+                updated_count += 1
+                self.stdout.write(f"✅ {ws_name} → {department.full_path}")
             else:
-                self.stdout.write(
-                    f"⏩ Участок уже существует: {workstation.name}")
+                self.stdout.write(f"⚠️ Участок '{ws_name}' не найден")
 
-        self.stdout.write(self.style.SUCCESS('🎉 Все участки созданы!'))
+        self.stdout.write(self.style.SUCCESS(f'🎉 Обновлено участков: {updated_count}'))

@@ -17,17 +17,19 @@ class EmployeeAdmin(UserAdmin):
     # Заменяем username на login в list_display
     list_display = [
         'full_name',
-        'login',  # ← заменил username
+        'login',
         'employee_id',
         'card_number',
         'birth_date',
         'hire_date',
         'is_active',
         'is_manager',
+        'role',
+        'department'
     ]
     list_filter = [
         'is_active',
-        'is_manager',
+        'role',
         'marital_status',
         'has_children',
         'hire_date',
@@ -36,9 +38,10 @@ class EmployeeAdmin(UserAdmin):
         'last_name',
         'first_name',
         'patronymic',
-        'login',  # ← заменил username
+        'login',
         'employee_id',
         'card_number',
+        'department__name'
     ]
     ordering = ['last_name', 'first_name']
     filter_horizontal = []
@@ -49,7 +52,10 @@ class EmployeeAdmin(UserAdmin):
     # Убираем username из всех полей
     fieldsets = (
         ('Учетные данные', {
-            'fields': ('login', 'employee_id', 'password', 'is_active', 'is_manager', 'is_staff', 'is_superuser')
+            'fields': ('login', 'employee_id', 'password', 'is_active', 'role', 'is_staff', 'is_superuser')
+        }),
+        ('Подразделение', {
+            'fields': ('department',)
         }),
         ('Личная информация', {
             'fields': ('last_name', 'first_name', 'patronymic', 'birth_date', 'photo')

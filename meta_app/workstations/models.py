@@ -1,6 +1,65 @@
 from django.db import models
 
 
+class Department(models.Model):
+    """Подразделение (цехб отдел)"""
+    
+    name = models.CharField(
+        max_length=255,
+        verbose_name='Название подразделения'
+    )
+    code = models.CharField(
+        max_length=20,
+        unique=True,
+        verbose_name='Код подразделения'
+    )
+    description = models.TextField(
+        blank=True,
+        verbose_name='Описание'
+    )
+    parent = models.ForeignKey(
+        'self',
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name='children',
+        verbose_name='Родительское подразделение'
+    )
+    is_active = models.BooleanField(
+        default=True,
+        verbose_name='Активно'
+    )
+    order = models.IntegerField(
+        default=0,
+        verbose_name='Порядок сортировки'
+    )
+    
+    # Системные поля
+    created_at = models.DateTimeField(
+        auto_now_add=True,
+        verbose_name='Дата создания'
+    )
+    updated_at = models.DateTimeField(
+        auto_now=True,
+        verbose_name='Дата изменения'
+    )
+    
+    class Meta:
+        verbose_name = 'Подразделение',
+        verbose_name_plural = 'Подразделения'
+        ordering = ['order', 'name']
+        
+    def __str__(self):
+        if self.parent:
+            return f"{self.parent.name}-{self.name}"
+        return self.name
+    
+    def full_path(self):
+        """Полный путь к подразделению"""
+        if self.parent:
+            return f"{self.parent.full_path}-{self.name}"
+        return self.name
+
 class Workstation(models.Model):
     """Участок производства"""
 
@@ -8,6 +67,16 @@ class Workstation(models.Model):
         ('5_2', '5/2 (Пн-Пт)'),
         ('2_2', '2/2 (сменный)'),
     ]
+    
+    # связь с подразделением
+    department = models.ForeignKey(
+        'Department',
+        on_delete=models.CASCADE,
+        related_name='workstations',
+        verbose_name='Подразделение',
+        null=True,
+        blank=True
+    )
 
     name = models.CharField(
         max_length=100,
@@ -76,14 +145,23 @@ class Workstation(models.Model):
     class Meta:
         verbose_name = 'Участок'
         verbose_name_plural = 'Участки'
-        ordering = ['name']
+        ordering = ['department__name', 'name']
 
     def __str__(self):
+        if self.department:
+            return f"{self.department.name}-{self.name} ({self.short_name})"
         return f"{self.name} ({self.short_name})"
 
     @property
     def full_name(self):
+        if self.department:
+            return f"{self.department.name} → {self.name} ({self.short_name})"
         return f"{self.name} ({self.short_name})"
+    
+    @property
+    def department_name(self):
+        """Короткое название подразделения"""
+        return self.department.name if self.department else 'Без подразделения'
 
 
 class EmployeeWorkstation(models.Model):

@@ -1,0 +1,139 @@
+{% extends 'base/base.html' %}
+
+{% block title %}Участки - MetaAdmin{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-gear text-warning"></i> Участки</h1>
+    <div>
+        <a href="/admin/workstations/workstation/add/" class="btn btn-success">
+            <i class="bi bi-plus"></i> Добавить участок
+        </a>
+        <a href="{% url 'dashboard:director_dashboard' %}" class="btn btn-outline-secondary">
+            <i class="bi bi-arrow-left"></i> Назад
+        </a>
+    </div>
+</div>
+
+<!-- Фильтры -->
+<div class="card shadow-sm mb-3">
+    <div class="card-body">
+        <form method="get" class="row g-3 align-items-end">
+            <div class="col-md-4">
+                <label class="form-label fw-bold">Поиск</label>
+                <input type="text" name="search" class="form-control" 
+                       placeholder="Название, сокращение..." 
+                       value="{{ search|default:'' }}">
+            </div>
+            <div class="col-md-3">
+                <label class="form-label fw-bold">Подразделение</label>
+                <select name="department" class="form-select">
+                    <option value="">Все подразделения</option>
+                    {% for dept in departments %}
+                    <option value="{{ dept.id }}" 
+                            {% if selected_department == dept.id|stringformat:"s" %}selected{% endif %}>
+                        {{ dept.name }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-search"></i> Найти
+                </button>
+            </div>
+            <div class="col-md-2">
+                <a href="{% url 'dashboard:workstation_list' %}" class="btn btn-outline-secondary w-100">
+                    <i class="bi bi-arrow-counterclockwise"></i> Сбросить
+                </a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Таблица участков -->
+<div class="card shadow-sm">
+    <div class="card-header bg-warning text-dark d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-gear"></i> Список участков</h5>
+        <span class="badge bg-dark">{{ workstations|length }} участков</span>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover mb-0" style="font-size: 13px;">
+                <thead class="table-light">
+                    <tr>
+                        <th>#</th>
+                        <th>Название</th>
+                        <th>Сокращение</th>
+                        <th>Подразделение</th>
+                        <th class="text-center">Режим работы</th>
+                        <th class="text-center">Часов в день</th>
+                        <th class="text-center">Статус</th>
+                        <th class="text-center">Действия</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for ws in workstations %}
+                    <tr>
+                        <td>{{ forloop.counter }}</td>
+                        <td>
+                            <strong>{{ ws.name }}</strong>
+                        </td>
+                        <td><span class="badge bg-secondary">{{ ws.short_name }}</span></td>
+                        <td>
+                            {% if ws.department %}
+                                <span class="badge bg-info text-white">{{ ws.department.name }}</span>
+                            {% else %}
+                                <span class="text-muted">—</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <span class="badge 
+                                {% if ws.schedule_type == '5_2' %}bg-primary
+                                {% else %}bg-warning text-dark{% endif %}">
+                                {{ ws.get_schedule_type_display }}
+                            </span>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge bg-secondary">{{ ws.hours_per_day|floatformat:1 }}</span>
+                        </td>
+                        <td class="text-center">
+                            {% if ws.is_active %}
+                            <span class="badge bg-success">Активен</span>
+                            {% else %}
+                            <span class="badge bg-danger">Неактивен</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-center">
+                            <a href="/admin/workstations/workstation/{{ ws.id }}/change/" 
+                               class="btn btn-outline-primary btn-sm" title="Редактировать">
+                                <i class="bi bi-pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="8" class="text-center py-4">
+                            <i class="bi bi-gear" style="font-size: 32px; color: #dee2e6;"></i>
+                            <p class="text-muted mt-2">Участков не найдено</p>
+                            <a href="/admin/workstations/workstation/add/" class="btn btn-primary btn-sm">
+                                <i class="bi bi-plus"></i> Добавить первый участок
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                {% if workstations %}
+                <tfoot class="table-light fw-bold">
+                    <tr>
+                        <td colspan="3" class="text-end">Итого:</td>
+                        <td class="text-center">{{ workstations|length }}</td>
+                        <td colspan="4"></td>
+                    </tr>
+                </tfoot>
+                {% endif %}
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

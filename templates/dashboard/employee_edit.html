@@ -24,7 +24,11 @@
             </div>
             {% endif %}
             <div class="row">
+                <!-- Левый блок -->
                 <div class="col-md-6">
+                    <!--<div class="card-header bg-primary muted">
+                        <h6 class="md-0">Личные данные</h6>
+                    </div>-->
                     <div class="row">
                         <div class="col-md-6">
                             <div class="mb-3">
@@ -36,7 +40,7 @@
                             </div>
                         </div>
                         <div class="col-md-6">
-                            <div class="mb-3">
+                            <div class="md-3">
                                 <label for="{{ form.first_name.id_for_label }}" class="form-label">Имя *</label>
                                 {{ form.first_name }}
                                 {% if form.first_name.errors %}
@@ -45,19 +49,26 @@
                             </div>
                         </div>
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="{{ form.patronymic.id_for_label }}" class="form-label">Отчество</label>
-                        {{ form.patronymic }}
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="md-3">
+                                <label for="{{ form.patronymic.id_for_label }}" class="form-label">Отчество</label>
+                                {{ form.patronymic }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="md-3">
+                                <label for="{{ form.birth_date.id_for_label }}" class="form-label">Дата рождения *</label>
+                                {{ form.birth_date }}
+                                {% if form.birth_date.errors %}
+                                <div class="text-danger small">
+                                    {{ form.birth_date.errors }}
+                                </div>
+                                {% endif %}
+                            </div>
+                        </div>
                     </div>
-                    
-                    <div class="mb-3">
-                        <label for="{{ form.birth_date.id_for_label }}" class="form-label">Дата рождения *</label>
-                        {{ form.birth_date }}
-                        {% if form.birth_date.errors %}
-                        <div class="text-danger small">{{ form.birth_date.errors }}</div>
-                        {% endif %}
-                    </div>
+
 
                     <div class="mb-3">
                         <label for="{{ form.phone_number.id_for_label }}" class="form-label">№ телефона</label>
@@ -67,34 +78,7 @@
                         {% endif %}
                     </div>
                 
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label for="{{ form.card_number.id_for_label }}" class="form-label">Номер карточки</label>
-                                {{ form.card_number }}
-                                {% if form.card_number.errors %}
-                                <div class="text-danger small">{{ form.card_number.errors }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="{{ form.employee_id.id_for_label }}" class="form-label">Табельный номер *</label>
-                            {{ form.employee_id }}
-                            {% if form.employee_id.errors %}
-                            <div class="text-danger small">{{ form.employee_id.errors }}</div>
-                            {% endif %}
-                        </div>
-                        <div class="mb-3">
-                            <label for="{{ form.login.id_for_label }}" class="form-label">Логин для входа *</label>
-                            {{ form.login }}
-                            {% if form.login.errors %}
-                            <div class="text-danger small">{{ form.login.errors }}</div>
-                            {% endif %}
-                        </div>
-                    </div>
-
+                    
                     <div class="mb-3">
                         <label for="{{ form.photo.id_for_label }}" class="form-label">Фото</label>
                         {{ form.photo }}
@@ -106,7 +90,7 @@
                         {% endif %}
                     </div>
                 </div>
-                
+                <!-- Правый блок -->
                 <div class="col-md-6">
                     <div class="mb-3">
                         <label for="{{ form.hire_date.id_for_label }}" class="form-label">Дата приема *</label>
@@ -119,6 +103,41 @@
                     <div class="mb-3">
                         <label for="{{ form.dismissal_date.id_for_label }}" class="form-label">Дата увольнения</label>
                         {{ form.dismissal_date }}
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.card_number.id_for_label }}" class="form-label">Номер карточки</label>
+                                {{ form.card_number }}
+                                {% if form.card_number.errors %}
+                                <div class="text-danger small">{{ form.card_number.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <label for="{{ form.employee_id.id_for_label }}" class="form-label">Табельный номер *</label>
+                                {{ form.employee_id }}
+                                {% if form.employee_id.errors %}
+                                <div class="text-danger small">{{ form.employee_id.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="{{ form.department.id_for_label }}" class="form-label">Подразделение</label>
+                            {{ form.department }}
+                            {% if form.department.errors %}
+                            <div class="text-danger small">{{ form.department.errors }}</div>
+                            {% endif %}
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="{{ form.login.id_for_label }}" class="form-label">Логин для входа *</label>
+                            {{ form.login }}
+                            {% if form.login.errors %}
+                            <div class="text-danger small">{{ form.login.errors }}</div>
+                            {% endif %}
+                        </div>
                     </div>
                     
                     <div class="mb-3">
