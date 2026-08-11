@@ -334,7 +334,22 @@
                             {% for item in kpi_results %}
                             <tr>
                                 <td><strong>{{ item.kpi.name }}</strong></td>
-                                <td>{{ item.kpi.get_type_display }}</td>
+                                <td>
+                                    {{ item.kpi.get_type_display }}
+                                    {% if item.kpi.type == 'has_skills' and item.skill_count is not None %}
+                                        <span class="badge bg-info ms-1">{{ item.skill_count }} навыков</span>
+                                    {% endif %}
+                                    {% if item.kpi.type == 'no_absence' and item.absence_data %}
+                                        <span class="badge bg-secondary ms-1">
+                                            {{ item.absence_data.present_days }}/{{ item.absence_data.total_workdays }} дн.
+                                        </span>
+                                        {% if item.absence_data.absence_days > 0 %}
+                                        <span class="badge bg-danger ms-1">
+                                            {{ item.absence_data.absence_days }} пропусков
+                                        </span>
+                                        {% endif %}
+                                    {% endif %}
+                                </td>
                                 <td class="text-center">
                                     {% if item.completed %}
                                     <span class="text-success"><i class="bi bi-check-circle"></i></span>
@@ -356,6 +371,22 @@
                                     {% if item.kpi.skill_price > 0 %}
                                         {% if item.kpi.bonus_amount > 0 or item.kpi.bonus_percent > 0 %}<br>{% endif %}
                                         {{ item.kpi.skill_price|floatformat:0 }} ₽/навык
+                                        {% if item.kpi.type == 'has_skills' and item.skill_count is not None %}
+                                            <br>
+                                            <small class="text-muted">
+                                                ({{ item.bonus_skills_count  }} доп. навыков)
+                                            </small>
+                                        {% endif %}
+                                    {% endif %}
+                                    {% if item.kpi.type == 'no_absence' and item.absence_data %}
+                                        <br>
+                                        <small class="text-muted">
+                                            Рабочих дней: {{ item.absence_data.total_workdays }},
+                                            Присутствовал: {{ item.absence_data.present_days }}
+                                            {% if item.absence_data.absence_days > 0 %}
+                                                <span class="text-danger">({{ item.absence_data.absence_days }} пропусков)</span>
+                                            {% endif %}
+                                        </small>
                                     {% endif %}
                                 </td>
                             </tr>

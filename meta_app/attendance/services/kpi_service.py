@@ -66,61 +66,62 @@ class KPIService:
         # KPI: Нет пропусков
         # ============================================
         if kpi.type == 'no_absence':
-            # ✅ ПРАВИЛЬНАЯ ЛОГИКА:
-            # 1. Получаем количество рабочих дней в месяце
             total_workdays = KPIService.get_workdays_in_month(employee, year, month)
-            
-            # 2. Получаем количество дней, когда сотрудник присутствовал (статус 'present')
             present_days = attendances.filter(status='present').count()
-            
-            # 3. Получаем количество дней с пропусками (absent, sick, vacation)
             absence_days = attendances.filter(
                 status__in=['absent', 'sick', 'vacation']
             ).count()
             
-            # 4. KPI выполнен, если:
-            #    - присутствовал во все рабочие дни
-            #    - И нет ни одного дня с пропуском
-            #    - И количество рабочих дней > 0
             is_completed = (
                 total_workdays > 0 and 
                 present_days == total_workdays and 
                 absence_days == 0
             )
+            bonus = Decimal('0')
             
         # ============================================
         # KPI: Есть навыки
         # ============================================
         elif kpi.type == 'has_skills':
             skills = employee.employee_skills.select_related('skill').all()
-            is_completed = skills.exists()
+            skill_count = skills.count()
             
+            # 1 навык → входит в оклад (бонус 0)
+            # 2+ навыков → бонус за каждый навык сверх 1-го
+            is_completed = True
+            
+            if skill_count >= 2:
+                bonus_skills = skill_count - 1  # Навыки сверх 1-го
+                bonus = Decimal(str(kpi.skill_price)) * bonus_skills
+            else:
+                bonus = Decimal('0')
+                
         # ============================================
         # KPI: Была переработка
         # ============================================
         elif kpi.type == 'overtime':
-            # Проверяем, была ли переработка в любом рабочем дне
             has_overtime = attendances.filter(
                 overtime_hours__gt=0,
                 status='present'
             ).exists()
             is_completed = has_overtime
+            bonus = Decimal('0')
             
         # ============================================
         # KPI: Чистое рабочее место
         # ============================================
         elif kpi.type == 'clean_workplace':
-            # Пока заглушка
             is_completed = True
+            bonus = Decimal('0')
             
         # ============================================
         # Пользовательский KPI
         # ============================================
         else:
             is_completed = True
+            bonus = Decimal('0')
         
-        # Рассчитываем бонус
-        bonus = Decimal('0')
+        # Если KPI выполнен, добавляем фиксированный бонус и процент (НО НЕ НАВЫКИ!)
         if is_completed:
             # Фиксированный бонус
             bonus += Decimal(str(kpi.bonus_amount or 0))
@@ -129,11 +130,6 @@ class KPIService:
             if kpi.bonus_percent:
                 base_salary = Decimal(str(employee.base_salary or 0))
                 bonus += base_salary * Decimal(str(kpi.bonus_percent / 100))
-            
-            # Бонус за навыки
-            if kpi.type == 'has_skills' and kpi.skill_price:
-                skills_count = employee.employee_skills.count()
-                bonus += Decimal(str(kpi.skill_price)) * skills_count
         
         return is_completed, bonus
     

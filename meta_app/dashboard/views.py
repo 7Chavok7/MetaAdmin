@@ -1079,14 +1079,59 @@ def salary_detail(request, employee_id, year, month):
     # Получаем все KPI
     all_kpis = KPI.objects.filter(is_active=True)
     
+    # Получаем количество навыков сотрудника
+    skill_count = employee.employee_skills.count()
+    
+    # ============================================
+    # Получаем данные о посещаемости для KPI "Нет пропусков"
+    # ============================================
+    from meta_app.attendance.services.kpi_service import KPIService
+    total_workdays = KPIService.get_workdays_in_month(employee, year, month)
+    
+    attendances = DailyAttendance.objects.filter(
+        employee=employee,
+        record_date__year=year,
+        record_date__month=month
+    )
+    
+    present_days = attendances.filter(status='present').count()
+    absence_days = attendances.filter(
+        status__in=['absent', 'sick', 'vacation']
+    ).count()
+    has_any_record = attendances.exists()
+    
     # Формируем список KPI с результатами
     kpi_results = []
     for kpi in all_kpis:
         detail = kpi_details.get(kpi.name, {})
+        
+        # Для KPI "Нет пропусков" добавляем данные о днях
+        absence_data = None
+        if kpi.type == 'no_absence':
+            absence_data = {
+                'total_workdays': total_workdays,
+                'present_days': present_days,
+                'absence_days': absence_days,
+                'has_any_record': has_any_record,
+            }
+        
+        # Для KPI "Есть навыки" добавляем количество навыков
+        skill_count_data = None
+        bonus_skills_count = 0
+        if kpi.type == 'has_skills':
+            skill_count_data = skill_count
+            if skill_count >= 2:
+                bonus_skills_count = skill_count - 1
+            else:
+                bonus_skills_count = 0
+        
         kpi_results.append({
             'kpi': kpi,
             'completed': detail.get('completed', False),
             'bonus': detail.get('bonus', 0),
+            'skill_count': skill_count_data,
+            'bonus_skills_count': bonus_skills_count,
+            'absence_data': absence_data,  # ← добавить
         })
     
     # ============================================
