@@ -648,24 +648,19 @@ def employee_workstation_set_primary(request, employee_id, workstation_id):
 
 
 # ============================================
-# УЧАСТКИ (СПИСОК)
+# УПРАВЛЕНИЕ УЧАСТКАМИ (CRUD)
 # ============================================
 
 @login_required
 @manager_or_director_required
 def workstation_list(request):
     """Список всех участков"""
-    from meta_app.workstations.models import Workstation
-    
-    # Получаем все активные участки с подразделениями
     workstations = Workstation.objects.filter(is_active=True).select_related('department').order_by('department__name', 'name')
     
-    # Фильтр по подразделению
     department_id = request.GET.get('department')
     if department_id:
         workstations = workstations.filter(department_id=department_id)
     
-    # Поиск
     search = request.GET.get('search')
     if search:
         workstations = workstations.filter(
@@ -674,7 +669,6 @@ def workstation_list(request):
             Q(department__name__icontains=search)
         )
     
-    # Список подразделений для фильтра
     departments = Department.objects.filter(is_active=True)
     
     return render(request, 'dashboard/workstation_list.html', {
@@ -682,6 +676,121 @@ def workstation_list(request):
         'departments': departments,
         'selected_department': department_id,
         'search': search,
+        'is_director': is_director(request.user),
+        'is_deputy': request.user.role == 'deputy' if hasattr(request.user, 'role') else False,
+    })
+
+
+@login_required
+@director_required
+def workstation_create(request):
+    """Создание участка"""
+    if request.method == 'POST':
+        name = request.POST.get('name')
+        short_name = request.POST.get('short_name')
+        department_id = request.POST.get('department')
+        schedule_type = request.POST.get('schedule_type', '5_2')
+        work_start = request.POST.get('work_start', '08:00')
+        work_end = request.POST.get('work_end', '17:00')
+        hours_per_day = request.POST.get('hours_per_day', 8)
+        color = request.POST.get('color', '#007bff')
+        is_active = request.POST.get('is_active') == 'on'
+        
+        if not name or not short_name:
+            messages.error(request, 'Название и сокращение обязательны')
+            return redirect('dashboard:workstation_create')
+        
+        department = None
+        if department_id:
+            department = get_object_or_404(Department, id=department_id)
+        
+        Workstation.objects.create(
+            name=name,
+            short_name=short_name,
+            department=department,
+            schedule_type=schedule_type,
+            work_start=work_start,
+            work_end=work_end,
+            hours_per_day=hours_per_day,
+            color=color,
+            is_active=is_active,
+            created_by=request.user,
+            updated_by=request.user,
+        )
+        
+        messages.success(request, f'Участок "{name}" создан!')
+        return redirect('dashboard:workstation_list')
+    
+    departments = Department.objects.filter(is_active=True)
+    return render(request, 'dashboard/workstation_form.html', {
+        'departments': departments,
+        'title': 'Создать участок',
+        'workstation': None,
+    })
+
+
+@login_required
+@director_required
+def workstation_edit(request, workstation_id):
+    """Редактирование участка"""
+    workstation = get_object_or_404(Workstation, id=workstation_id)
+    
+    if request.method == 'POST':
+        workstation.name = request.POST.get('name')
+        workstation.short_name = request.POST.get('short_name')
+        department_id = request.POST.get('department')
+        workstation.schedule_type = request.POST.get('schedule_type', '5_2')
+        workstation.work_start = request.POST.get('work_start', '08:00')
+        workstation.work_end = request.POST.get('work_end', '17:00')
+        workstation.hours_per_day = request.POST.get('hours_per_day', 8)
+        workstation.color = request.POST.get('color', '#007bff')
+        workstation.is_active = request.POST.get('is_active') == 'on'
+        workstation.updated_by = request.user
+        
+        if not workstation.name or not workstation.short_name:
+            messages.error(request, 'Название и сокращение обязательны')
+            return redirect('dashboard:workstation_edit', workstation_id=workstation.id)
+        
+        workstation.department = None
+        if department_id:
+            workstation.department = get_object_or_404(Department, id=department_id)
+        
+        workstation.save()
+        
+        messages.success(request, f'Участок "{workstation.name}" обновлён!')
+        return redirect('dashboard:workstation_list')
+    
+    departments = Department.objects.filter(is_active=True)
+    return render(request, 'dashboard/workstation_form.html', {
+        'departments': departments,
+        'title': 'Редактировать участок',
+        'workstation': workstation,
+    })
+
+
+@login_required
+@director_required
+def workstation_delete(request, workstation_id):
+    """Удаление участка (мягкое)"""
+    workstation = get_object_or_404(Workstation, id=workstation_id)
+    
+    if request.method == 'POST':
+        # Проверяем, есть ли сотрудники, привязанные к этому участку
+        if workstation.employee_assignments.exists():
+            messages.error(
+                request, 
+                f'Нельзя удалить участок "{workstation.name}", '
+                'так как на нём есть сотрудники. Сначала переместите их.'
+            )
+            return redirect('dashboard:workstation_list')
+        
+        workstation.is_active = False
+        workstation.save()
+        messages.success(request, f'Участок "{workstation.name}" помечен как неактивный')
+        return redirect('dashboard:workstation_list')
+    
+    return render(request, 'dashboard/workstation_confirm_delete.html', {
+        'workstation': workstation,
     })
 
 

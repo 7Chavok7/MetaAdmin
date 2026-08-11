@@ -6,9 +6,11 @@
 <div class="d-flex justify-content-between align-items-center mb-4">
     <h1><i class="bi bi-gear text-warning"></i> Участки</h1>
     <div>
-        <a href="/admin/workstations/workstation/add/" class="btn btn-success">
+        {% if is_director or is_deputy %}
+        <a href="{% url 'dashboard:workstation_create' %}" class="btn btn-success">
             <i class="bi bi-plus"></i> Добавить участок
         </a>
+        {% endif %}
         <a href="{% url 'dashboard:director_dashboard' %}" class="btn btn-outline-secondary">
             <i class="bi bi-arrow-left"></i> Назад
         </a>
@@ -105,9 +107,11 @@
                             {% endif %}
                         </td>
                         <td class="text-center">
-                            <a href="/admin/workstations/workstation/{{ ws.id }}/change/" 
-                               class="btn btn-outline-primary btn-sm" title="Редактировать">
+                            <a href="{% url 'dashboard:workstation_edit' ws.id %}" class="btn btn-outline-primary btn-sm" title="Редактировать">
                                 <i class="bi bi-pencil"></i>
+                            </a>
+                            <a href="{% url 'dashboard:workstation_delete' ws.id %}" class="btn btn-outline-danger btn-sm" title="Удалить">
+                                <i class="bi bi-trash"></i>
                             </a>
                         </td>
                     </tr>

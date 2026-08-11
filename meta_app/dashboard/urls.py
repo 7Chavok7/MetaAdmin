@@ -63,8 +63,11 @@ urlpatterns = [
     path('departments/<int:department_id>/edit/', views.department_edit, name='department_edit'),
     path('departments/<int:department_id>/delete/', views.department_delete, name='department_delete'),
 
-    # Участки (список)
+    # Участки
     path('workstations/', views.workstation_list, name='workstation_list'),
+    path('workstations/create/', views.workstation_create, name='workstation_create'),
+    path('workstations/<int:workstation_id>/edit/', views.workstation_edit, name='workstation_edit'),
+    path('workstations/<int:workstation_id>/delete/', views.workstation_delete, name='workstation_delete'),
 
     # KPI
     path('kpi/', views.kpi_list, name='kpi_list'),
