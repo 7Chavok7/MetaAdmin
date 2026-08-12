@@ -83,3 +83,13 @@ git merge feature/kpi
 
 # 4. Отправить master на GitHub
 git push origin master
+
+
+
+📋 Быстрая команда (всё вместе)
+bash
+# Локально:
+git add . && git commit -m "fix: исправлен расчёт бонуса за навыки в KPI" && git push origin master
+
+# На сервере:
+ssh ag@metaserver "cd ~/django/metaadmin && git pull origin master && docker-compose exec web python manage.py migrate && docker-compose exec web python manage.py collectstatic --noinput && docker-compose down && docker-compose up -d --build"

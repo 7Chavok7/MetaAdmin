@@ -132,9 +132,14 @@ def director_dashboard(request):
     total_workstations = Workstation.objects.filter(is_active=True).count()
     
     # Присутствие сегодня
-    today_attendances = DailyAttendance.objects.filter(record_date=today)
-    present_count = today_attendances.filter(is_present=True).count()
-    total_today = today_attendances.count()
+    active_employees = Employee.objects.filter(is_active=True, is_superuser=False)
+    total_today = active_employees.count()  # ← теперь это ВСЕ активные сотрудники
+    
+    # Получаем тех, кто отмечен присутствующим сегодня
+    present_count = DailyAttendance.objects.filter(
+        record_date=today,
+        is_present=True
+    ).values('employee').distinct().count()
     
     # Сотрудники без подразделения
     employees_without_dept = Employee.objects.filter(
@@ -142,6 +147,12 @@ def director_dashboard(request):
         is_active=True,
         is_superuser=False
     ).count()
+    
+    # ✅ Дополнительно: кто в отпуске сегодня
+    vacation_today = DailyAttendance.objects.filter(
+        record_date=today,
+        status='vacation'
+    ).values('employee').distinct().count()
     
     context = {
         'total_employees': total_employees,
@@ -152,6 +163,7 @@ def director_dashboard(request):
             'present': present_count,
             'total': total_today,
             'percent': round(present_count / total_today * 100, 1) if total_today > 0 else 0,
+            'vacation': vacation_today,  # ← добавили
         },
         'recent_employees': Employee.objects.filter(
             is_active=True, is_superuser=False
