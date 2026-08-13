@@ -2,30 +2,57 @@
 
 // ===== СВОРАЧИВАНИЕ ПОДРАЗДЕЛЕНИЙ =====
 function toggleParent(headerRow) {
-    let content = headerRow.nextElementSibling;
-    
-    while (content && !content.classList.contains('parent-content')) {
-        content = content.nextElementSibling;
-    }
-    
-    if (!content) {
-        console.warn('Не найден контент для сворачивания');
-        return;
-    }
-    
+    const isExpanded = headerRow.dataset.expanded === 'true';
+    const parentIndex = headerRow.rowIndex;
+    const table = headerRow.closest('table');
+    const rows = table.querySelectorAll('tr');
     const toggleIcon = headerRow.querySelector('.toggle-icon i');
     
-    if (content.classList.contains('hidden')) {
-        content.classList.remove('hidden');
-        if (toggleIcon) {
-            toggleIcon.className = 'bi bi-chevron-down';
+    // Ищем все строки, принадлежащие этой группе
+    let found = false;
+    for (let i = parentIndex + 1; i < rows.length; i++) {
+        const row = rows[i];
+        if (row.classList.contains('parent-header')) {
+            break;
         }
-    } else {
-        content.classList.add('hidden');
-        if (toggleIcon) {
-            toggleIcon.className = 'bi bi-chevron-right';
+        if (row.classList.contains('parent-content')) {
+            if (!found) found = true;
+            if (isExpanded) {
+                row.classList.add('hidden');
+            } else {
+                row.classList.remove('hidden');
+            }
         }
     }
+    
+    // Меняем состояние
+    if (isExpanded) {
+        headerRow.dataset.expanded = 'false';
+        if (toggleIcon) toggleIcon.className = 'bi bi-chevron-right';
+    } else {
+        headerRow.dataset.expanded = 'true';
+        if (toggleIcon) toggleIcon.className = 'bi bi-chevron-down';
+    }
+}
+
+// ===== РАЗВЕРНУТЬ ВСЕ =====
+function expandAll() {
+    const headers = document.querySelectorAll('.parent-header');
+    headers.forEach(header => {
+        if (header.dataset.expanded === 'false') {
+            toggleParent(header);
+        }
+    });
+}
+
+// ===== СВЕРНУТЬ ВСЕ =====
+function collapseAll() {
+    const headers = document.querySelectorAll('.parent-header');
+    headers.forEach(header => {
+        if (header.dataset.expanded === 'true') {
+            toggleParent(header);
+        }
+    });
 }
 
 // ===== РАСЧЁТ ЗАРПЛАТЫ =====

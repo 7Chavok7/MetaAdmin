@@ -5,213 +5,219 @@
 {% block title %}Таблица зарплат - MetaAdmin{% endblock %}
 
 {% block extra_css %}
-    <link rel="stylesheet" href="{% static 'dashboard/css/salary_table.css' %}?v=2">
+    <link rel="stylesheet" href="{% static 'dashboard/css/salary_table.css' %}?v=3">
 {% endblock %}
 
 {% block content %}
-<div class="d-flex justify-content-between align-items-center mb-4 flex-wrap gap-2">
-    <h1><i class="bi bi-calculator text-primary"></i> Таблица зарплат</h1>
-    <div class="year-nav">
-        <a href="?year={{ year|add:-1 }}" class="btn btn-outline-secondary">
-            <i class="bi bi-chevron-left"></i>
-        </a>
-        <span class="fw-bold h5 mb-0">{{ year }}</span>
-        <a href="?year={{ year|add:1 }}" class="btn btn-outline-secondary">
-            <i class="bi bi-chevron-right"></i>
-        </a>
-        <a href="?year={{ current_year }}" class="btn btn-outline-primary btn-sm">
-            <i class="bi bi-calendar-check"></i> Текущий
-        </a>
+<div class="salary-page-wrapper">
+    <div class="d-flex justify-content-between align-items-center mb-3 flex-wrap gap-2">
+        <h1><i class="bi bi-calculator text-primary"></i> Таблица зарплат</h1>
+        <div class="year-nav">
+            <a href="?year={{ year|add:-1 }}" class="btn btn-outline-secondary">
+                <i class="bi bi-chevron-left"></i>
+            </a>
+            <span class="fw-bold h5 mb-0">{{ year }}</span>
+            <a href="?year={{ year|add:1 }}" class="btn btn-outline-secondary">
+                <i class="bi bi-chevron-right"></i>
+            </a>
+            <a href="?year={{ current_year }}" class="btn btn-outline-primary btn-sm">
+                <i class="bi bi-calendar-check"></i> Текущий
+            </a>
+        </div>
     </div>
-</div>
 
-<!-- Информация -->
-<div class="alert alert-info d-flex justify-content-between align-items-center flex-wrap gap-2">
-    <div>
-        <i class="bi bi-info-circle"></i>
-        <strong>Легенда:</strong>
-        <span class="badge bg-success mx-1">Зелёные ячейки</span> — зарплата рассчитана
-        <span class="badge bg-secondary mx-1">Серые ячейки</span> — не рассчитана
-        <span class="badge border border-primary mx-1">Синяя рамка</span> — текущий месяц
-        <span class="badge bg-primary mx-1">Клик по заголовку</span> — сворачивает/разворачивает группу
+    <!-- Информация -->
+    <div class="alert alert-info d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <!--<div>
+            <i class="bi bi-info-circle"></i>
+            <strong>Легенда:</strong>
+            <span class="badge bg-success mx-1">Зелёные ячейки</span> — зарплата рассчитана
+            <span class="badge bg-secondary mx-1">Серые ячейки</span> — не рассчитана
+            <span class="badge border border-primary mx-1">Синяя рамка</span> — текущий месяц
+            <span class="badge bg-primary mx-1">Клик по заголовку</span> — разворачивает/сворачивает группу
+            <span class="badge bg-secondary mx-1">Группы свёрнуты</span> — по умолчанию
+        </div>-->
+        <div>
+            <button onclick="expandAll()" class="btn btn-outline-primary btn-sm me-1">
+                <i class="bi bi-arrows-expand"></i> Развернуть все
+            </button>
+            <button onclick="collapseAll()" class="btn btn-outline-secondary btn-sm me-1">
+                <i class="bi bi-arrows-collapse"></i> Свернуть все
+            </button>
+            <button onclick="calculateAllMonths()" class="btn btn-primary">
+                <i class="bi bi-play-circle"></i> Рассчитать все месяцы
+            </button>
+        </div>
     </div>
-    <div>
-        <button onclick="calculateAllMonths()" class="btn btn-primary">
-            <i class="bi bi-play-circle"></i> Рассчитать все месяцы
-        </button>
-    </div>
-</div>
 
-<!-- Таблица -->
-<div class="card shadow-sm">
-    <div class="card-body p-0">
-        <div class="table-responsive">
-            <table class="table table-bordered table-hover salary-table mb-0">
-                <thead>
-                    <tr>
-                        <th class="sticky-col" style="min-width: 200px; max-width: 200px;">
-                            Сотрудник / Подразделение
-                        </th>
+    <!-- Таблица -->
+    <div class="card shadow-sm h-100">
+        <div class="card-body p-0 h-100">
+            <div class="table-responsive h-100">
+                <table class="table table-bordered table-hover salary-table mb-0">
+                    <colgroup>
+                        <col style="width: 200px; min-width: 200px; max-width: 200px;">
                         {% for month in months %}
-                        <th class="text-center" style="min-width: 70px; max-width: 70px;">
-                            {{ month_names|slice:month|last }}
-                            {% if month == current_month and year == current_year %}
-                            <span class="badge bg-primary" style="font-size: 8px;">тек</span>
-                            {% endif %}
-                            <br>
-                            <button class="btn btn-sm btn-calc-month {% if month in calculated_months %}calculated{% else %}not-calculated{% endif %}"
-                                    onclick="calculateMonth({{ year }}, {{ month }})"
-                                    title="Рассчитать зарплату за {{ month_names|slice:month|last }}">
-                                <i class="bi bi-{% if month in calculated_months %}check-circle{% else %}calculator{% endif %}"></i>
-                            </button>
-                        </th>
+                        <col style="width: 70px; min-width: 70px; max-width: 70px;">
                         {% endfor %}
-                        <th class="text-center" style="min-width: 90px; max-width: 90px; background: #f1f3f5;">
-                            Итого
-                        </th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for parent in table_data %}
-                        <!-- Родительское подразделение -->
-                        <!--Правильные окончания-->
-                        <!--<tr class="parent-header" onclick="toggleParent(this)">
-                            <td colspan="14">
-                                <span class="toggle-icon">
-                                    <i class="bi bi-chevron-down"></i>
-                                </span>
-                                <i class="bi bi-folder-open text-primary"></i> 
-                                {{ parent.parent_name }}
-                                <span class="parent-badge">
-                                    {{ parent.children|length }} 
-                                    {% with count=parent.children|length %}
-                                        {% if count == 1 %}участок{% elif count < 5 %}участка{% else %}участков{% endif %}
-                                    {% endwith %}
-                                </span>
-                                <span class="badge bg-secondary ms-1">
-                                    {{ parent.total_employees|default:0 }} 
-                                    {% with count=parent.total_employees|default:0 %}
-                                        {% if count == 1 %}сотрудник{% elif count < 5 %}сотрудника{% else %}сотрудников{% endif %}
-                                    {% endwith %}
-                                </span>
-                            </td>
-                        </tr>-->
-
-                        <!-- Иконки вместо слов -->
-                        <tr class="parent-header" onclick="toggleParent(this)">
-                            <td colspan="14">
-                                <span class="toggle-icon">
-                                    <i class="bi bi-chevron-down"></i>
-                                </span>
-                                <i class="bi bi-folder-open text-primary"></i> 
-                                {{ parent.parent_name }}
-                                <span class="ms-2 text-muted" style="font-size: 13px;">
-                                    <i class="bi bi-diagram-3"></i> {{ parent.children|length }}
-                                    <i class="bi bi-people ms-2"></i> {{ parent.total_employees|default:0 }}
-                                </span>
-                            </td>
-                        </tr>
-                        
-                        <!-- Дочерние подразделения и сотрудники -->
-                        <tr class="parent-content">
-                            <td colspan="14" style="padding: 0;">
-                                <table class="table table-bordered table-hover mb-0" style="width: 100%;">
-                                    <tbody>
-                                        {% for child in parent.children %}
-                                            <!-- Заголовок дочернего подразделения -->
-                                            <!--Правильные окончания-->
-                                            <!--<tr class="dept-header-row">
-                                                <td colspan="14" style="padding-left: 30px;">
-                                                    <i class="bi bi-diagram-3 dept-icon"></i>
-                                                    {{ child.department_name }}
-                                                    <span class="dept-badge">
-                                                        {{ child.employees|length }} 
-                                                        {% with count=child.employees|length %}
-                                                            {% if count == 1 %}сотрудник{% elif count < 5 %}сотрудника{% else %}сотрудников{% endif %}
-                                                        {% endwith %}
-                                                    </span>
-                                                </td>
-                                            </tr>-->
-                                            
-                                            <!-- Иконки вместо слов -->
-                                            <tr class="dept-header-row">
-                                                <td colspan="14" style="padding-left: 30px;">
-                                                    <i class="bi bi-diagram-3 dept-icon"></i>
-                                                    {{ child.department_name }}
-                                                    <span class="ms-2 text-muted" style="font-size: 12px;">
-                                                        <i class="bi bi-people"></i> {{ child.employees|length }}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                            
-                                            <!-- Сотрудники -->
-                                            {% for emp_data in child.employees %}
-                                            <tr>
-                                                <td class="sticky-col" style="min-width: 200px; max-width: 200px; padding-left: 50px;">
-                                                    <div class="d-flex align-items-center">
-                                                        <a href="{% url 'dashboard:employee_detail' emp_data.employee.id %}" class="employee-link">
-                                                            {{ emp_data.employee.short_name }}
-                                                        </a>
-                                                        <small class="text-muted ms-1" style="font-size: 10px;">
-                                                            ({{ emp_data.employee.employee_id }})
-                                                        </small>
-                                                    </div>
-                                                </td>
-                                                
-                                                {% for month in months %}
-                                                    {% with salary=emp_data.salaries|slice:month|last %}
-                                                    <td class="salary-cell 
-                                                        {% if salary %}
-                                                            {% if salary.is_calculated %}calculated{% else %}not-calculated{% endif %}
-                                                        {% else %}
-                                                            not-calculated
-                                                        {% endif %}
-                                                        {% if month == current_month and year == current_year %}current-month{% endif %}"
-                                                        onclick="window.location.href='{% url 'dashboard:salary_detail' emp_data.employee.id year month %}'"
-                                                        style="cursor: pointer;"
-                                                        title="{% if salary %}Базовый: {{ salary.base|floatformat:0 }} руб.
-                                                    Бонус: {{ salary.bonus|floatformat:0 }} руб.{% endif %}
-                                                    Кликните для детального расчёта">
-                                                        
-                                                        {% if salary and salary.is_calculated %}
-                                                            <span class="amount">{{ salary.total|floatformat:0 }}</span>
-                                                            <span class="bonus">+{{ salary.bonus|floatformat:0 }}</span>
-                                                            <span class="base">{{ salary.base|floatformat:0 }}</span>
-                                                        {% else %}
-                                                            <span class="not-calculated-text">—</span>
-                                                        {% endif %}
-                                                    </td>
-                                                    {% endwith %}
-                                                {% endfor %}
-                                                
-                                                <td class="text-center salary-total">
-                                                    {% with total=emp_data.salaries|sum_values %}
-                                                    {{ total|floatformat:0 }}
-                                                    {% endwith %}
-                                                </td>
-                                            </tr>
-                                            {% endfor %}
-                                        {% empty %}
-                                            <tr>
-                                                <td colspan="14" class="text-center py-2 text-muted">
-                                                    Нет сотрудников в этом подразделении
-                                                </td>
-                                            </tr>
-                                        {% endfor %}
-                                    </tbody>
-                                </table>
-                            </td>
-                        </tr>
-                    {% empty %}
+                        <col style="width: 90px; min-width: 90px; max-width: 90px;">
+                    </colgroup>
+                    <thead>
                         <tr>
-                            <td colspan="14" class="text-center py-4">
-                                <i class="bi bi-inbox" style="font-size: 32px; color: #dee2e6;"></i>
-                                <p class="text-muted mt-2">Нет активных сотрудников</p>
-                            </td>
+                            <th class="sticky-col" style="min-width: 200px; max-width: 200px;">
+                                Сотрудник / Подразделение
+                            </th>
+                            {% for month in months %}
+                            <th class="text-center" style="min-width: 70px; max-width: 70px;">
+                                {{ month_names|slice:month|last }}
+                                {% if month == current_month and year == current_year %}
+                                <span class="badge bg-primary" style="font-size: 8px;">тек</span>
+                                {% endif %}
+                                <br>
+                                <button class="btn btn-sm btn-calc-month {% if month in calculated_months %}calculated{% else %}not-calculated{% endif %}"
+                                        onclick="calculateMonth({{ year }}, {{ month }})"
+                                        title="Рассчитать зарплату за {{ month_names|slice:month|last }}">
+                                    <i class="bi bi-{% if month in calculated_months %}check-circle{% else %}calculator{% endif %}"></i>
+                                </button>
+                            </th>
+                            {% endfor %}
+                            <th class="text-center" style="min-width: 90px; max-width: 90px; background: #f1f3f5;">
+                                Итого
+                            </th>
                         </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+                    </thead>
+                    <tbody>
+                        {% for parent in table_data %}
+                            <!-- Родительское подразделение -->
+                            <!-- ===== ВАРИАНТ 1: ПРАВИЛЬНЫЕ ОКОНЧАНИЯ (закомментирован) ===== -->
+                            <!--
+                            <tr class="parent-header" onclick="toggleParent(this)" data-expanded="false">
+                                <td colspan="14">
+                                    <span class="toggle-icon">
+                                        <i class="bi bi-chevron-right"></i>
+                                    </span>
+                                    <i class="bi bi-folder-open text-primary"></i> 
+                                    {{ parent.parent_name }}
+                                    <span class="parent-badge">
+                                        {{ parent.children|length }} 
+                                        {% with count=parent.children|length %}
+                                            {% if count == 1 %}участок{% elif count < 5 %}участка{% else %}участков{% endif %}
+                                        {% endwith %}
+                                    </span>
+                                    <span class="badge bg-secondary ms-1">
+                                        {{ parent.total_employees|default:0 }} 
+                                        {% with count=parent.total_employees|default:0 %}
+                                            {% if count == 1 %}сотрудник{% elif count < 5 %}сотрудника{% else %}сотрудников{% endif %}
+                                        {% endwith %}
+                                    </span>
+                                </td>
+                            </tr>
+                            -->
+
+                            <!-- ===== ВАРИАНТ 2: ИКОНКИ ВМЕСТО СЛОВ (активный) ===== -->
+                            <tr class="parent-header" onclick="toggleParent(this)" data-expanded="false">
+                                <td colspan="14">
+                                    <span class="toggle-icon">
+                                        <i class="bi bi-chevron-right"></i>
+                                    </span>
+                                    <i class="bi bi-folder-open text-primary"></i> 
+                                    {{ parent.parent_name }}
+                                    <span class="ms-2 text-muted" style="font-size: 13px;">
+                                        <i class="bi bi-diagram-3"></i> {{ parent.children|length }}
+                                        <i class="bi bi-people ms-2"></i> {{ parent.total_employees|default:0 }}
+                                    </span>
+                                </td>
+                            </tr>
+                            
+                            <!-- Дочерние подразделения и сотрудники (скрыты по умолчанию) -->
+                            {% for child in parent.children %}
+                                <!-- Заголовок дочернего подразделения -->
+                                <!-- ===== ВАРИАНТ 1: ПРАВИЛЬНЫЕ ОКОНЧАНИЯ (закомментирован) ===== -->
+                                <!--
+                                <tr class="dept-header-row parent-content hidden" data-parent="{{ forloop.parentloop.counter }}">
+                                    <td colspan="14" style="padding-left: 30px;">
+                                        <i class="bi bi-diagram-3 dept-icon"></i>
+                                        {{ child.department_name }}
+                                        <span class="dept-badge">
+                                            {{ child.employees|length }} 
+                                            {% with count=child.employees|length %}
+                                                {% if count == 1 %}сотрудник{% elif count < 5 %}сотрудника{% else %}сотрудников{% endif %}
+                                            {% endwith %}
+                                        </span>
+                                    </td>
+                                </tr>
+                                -->
+
+                                <!-- ===== ВАРИАНТ 2: ИКОНКИ ВМЕСТО СЛОВ (активный) ===== -->
+                                <tr class="dept-header-row parent-content hidden" data-parent="{{ forloop.parentloop.counter }}">
+                                    <td colspan="14" style="padding-left: 30px;">
+                                        <i class="bi bi-diagram-3 dept-icon"></i>
+                                        {{ child.department_name }}
+                                        <span class="ms-2 text-muted" style="font-size: 12px;">
+                                            <i class="bi bi-people"></i> {{ child.employees|length }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                
+                                <!-- Сотрудники -->
+                                {% for emp_data in child.employees %}
+                                <tr class="parent-content hidden" data-parent="{{ forloop.parentloop.parentloop.counter }}">
+                                    <td class="sticky-col" style="min-width: 200px; max-width: 200px; padding-left: 50px;">
+                                        <div class="d-flex align-items-center">
+                                            <a href="{% url 'dashboard:employee_detail' emp_data.employee.id %}" class="employee-link">
+                                                {{ emp_data.employee.short_name }}
+                                            </a>
+                                            <small class="text-muted ms-1" style="font-size: 10px;">
+                                                ({{ emp_data.employee.employee_id }})
+                                            </small>
+                                        </div>
+                                    </td>
+                                    
+                                    {% for month in months %}
+                                        {% with salary=emp_data.salaries|slice:month|last %}
+                                        <td class="salary-cell 
+                                            {% if salary %}
+                                                {% if salary.is_calculated %}calculated{% else %}not-calculated{% endif %}
+                                            {% else %}
+                                                not-calculated
+                                            {% endif %}
+                                            {% if month == current_month and year == current_year %}current-month{% endif %}"
+                                            onclick="window.location.href='{% url 'dashboard:salary_detail' emp_data.employee.id year month %}'"
+                                            style="cursor: pointer;"
+                                            title="{% if salary %}Базовый: {{ salary.base|floatformat:0 }} руб.
+                                        Бонус: {{ salary.bonus|floatformat:0 }} руб.{% endif %}
+                                        Кликните для детального расчёта">
+                                            
+                                            {% if salary and salary.is_calculated %}
+                                                <span class="amount">{{ salary.total|floatformat:0 }}</span>
+                                                <span class="bonus">+{{ salary.bonus|floatformat:0 }}</span>
+                                                <span class="base">{{ salary.base|floatformat:0 }}</span>
+                                            {% else %}
+                                                <span class="not-calculated-text">—</span>
+                                            {% endif %}
+                                        </td>
+                                        {% endwith %}
+                                    {% endfor %}
+                                    
+                                    <td class="text-center salary-total">
+                                        {% with total=emp_data.salaries|sum_values %}
+                                        {{ total|floatformat:0 }}
+                                        {% endwith %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            {% endfor %}
+                        {% empty %}
+                            <tr>
+                                <td colspan="14" class="text-center py-4">
+                                    <i class="bi bi-inbox" style="font-size: 32px; color: #dee2e6;"></i>
+                                    <p class="text-muted mt-2">Нет активных сотрудников</p>
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -220,5 +226,5 @@
 {% endblock %}
 
 {% block extra_js %}
-    <script src="{% static 'dashboard/js/salary_table.js' %}?v=2"></script>
+    <script src="{% static 'dashboard/js/salary_table.js' %}?v=3"></script>
 {% endblock %}
