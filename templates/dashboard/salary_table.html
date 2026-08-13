@@ -220,67 +220,78 @@
                     </tr>
                 </thead>
                 <tbody>
-                    {% for dept in table_data %}
-                        <!-- ===== ЗАГОЛОВОК ПОДРАЗДЕЛЕНИЯ ===== -->
-                        <tr class="dept-header-row">
-                            <td colspan="14">
-                                <i class="bi bi-diagram-3 dept-icon text-primary"></i>
-                                {{ dept.department }}
-                                <span class="dept-badge">{{ dept.employees|length }} сотрудников</span>
-                                <span class="dept-employees-count">
-                                    <i class="bi bi-people"></i>
+                    {% for parent in table_data %}
+                        <!-- ===== РОДИТЕЛЬСКОЕ ПОДРАЗДЕЛЕНИЕ ===== -->
+                        <tr class="table-primary">
+                            <td colspan="14" style="font-weight: 700; font-size: 15px; background: #cfe2ff;">
+                                <i class="bi bi-folder-open text-primary"></i> 
+                                {{ parent.parent_name }}
+                                <span class="badge bg-primary ms-2">
+                                    {{ parent.children|length }} участков
                                 </span>
                             </td>
                         </tr>
                         
-                        <!-- Сотрудники подразделения -->
-                        {% for emp_data in dept.employees %}
-                        <tr>
-                            <td class="sticky-col" style="min-width: 200px; max-width: 200px;">
-                                <div class="d-flex align-items-center">
-                                    <a href="{% url 'dashboard:employee_detail' emp_data.employee.id %}" 
-                                       class="employee-link">
-                                        {{ emp_data.employee.short_name }}
-                                    </a>
-                                    <small class="text-muted ms-1" style="font-size: 10px;">
-                                        ({{ emp_data.employee.employee_id }})
-                                    </small>
-                                </div>
-                            </td>
-                            
-                            {% for month in months %}
-                                {% with salary=emp_data.salaries|slice:month|last %}
-                                <td class="salary-cell 
-                                    {% if salary %}
-                                        {% if salary.is_calculated %}calculated{% else %}not-calculated{% endif %}
-                                    {% else %}
-                                        not-calculated
-                                    {% endif %}
-                                    {% if month == current_month and year == current_year %}current-month{% endif %}"
-                                    onclick="window.location.href='{% url 'dashboard:salary_detail' emp_data.employee.id year month %}'"
-                                    style="cursor: pointer;"
-                                    title="{% if salary %}Базовый: {{ salary.base|floatformat:0 }} руб.
-                                Бонус: {{ salary.bonus|floatformat:0 }} руб.{% endif %}
-                                Кликните для детального расчёта">
-                                    
-                                    {% if salary and salary.is_calculated %}
-                                        <span class="amount">{{ salary.total|floatformat:0 }}</span>
-                                        <span class="bonus">+{{ salary.bonus|floatformat:0 }}</span>
-                                        <span class="base">{{ salary.base|floatformat:0 }}</span>
-                                    {% else %}
-                                        <span class="not-calculated-text">—</span>
-                                    {% endif %}
+                        <!-- Дочерние подразделения -->
+                        {% for child in parent.children %}
+                            <!-- Заголовок дочернего подразделения -->
+                            <tr class="dept-header-row">
+                                <td colspan="14" style="padding-left: 30px;">
+                                    <i class="bi bi-diagram-3 dept-icon text-secondary"></i>
+                                    {{ child.department_name }}
+                                    <span class="dept-badge">{{ child.employees|length }} сотрудников</span>
                                 </td>
-                                {% endwith %}
-                            {% endfor %}
+                            </tr>
                             
-                            <!-- Итого по сотруднику -->
-                            <td class="text-center salary-total">
-                                {% with total=emp_data.salaries|sum_values %}
-                                {{ total|floatformat:0 }}
-                                {% endwith %}
-                            </td>
-                        </tr>
+                            <!-- Сотрудники дочернего подразделения -->
+                            {% for emp_data in child.employees %}
+                            <tr>
+                                <td class="sticky-col" style="min-width: 200px; max-width: 200px; padding-left: 50px;">
+                                    <div class="d-flex align-items-center">
+                                        <a href="{% url 'dashboard:employee_detail' emp_data.employee.id %}" 
+                                           class="employee-link">
+                                            {{ emp_data.employee.short_name }}
+                                        </a>
+                                        <small class="text-muted ms-1" style="font-size: 10px;">
+                                            ({{ emp_data.employee.employee_id }})
+                                        </small>
+                                    </div>
+                                </td>
+                                
+                                {% for month in months %}
+                                    {% with salary=emp_data.salaries|slice:month|last %}
+                                    <td class="salary-cell 
+                                        {% if salary %}
+                                            {% if salary.is_calculated %}calculated{% else %}not-calculated{% endif %}
+                                        {% else %}
+                                            not-calculated
+                                        {% endif %}
+                                        {% if month == current_month and year == current_year %}current-month{% endif %}"
+                                        onclick="window.location.href='{% url 'dashboard:salary_detail' emp_data.employee.id year month %}'"
+                                        style="cursor: pointer;"
+                                        title="{% if salary %}Базовый: {{ salary.base|floatformat:0 }} руб.
+                                    Бонус: {{ salary.bonus|floatformat:0 }} руб.{% endif %}
+                                    Кликните для детального расчёта">
+                                        
+                                        {% if salary and salary.is_calculated %}
+                                            <span class="amount">{{ salary.total|floatformat:0 }}</span>
+                                            <span class="bonus">+{{ salary.bonus|floatformat:0 }}</span>
+                                            <span class="base">{{ salary.base|floatformat:0 }}</span>
+                                        {% else %}
+                                            <span class="not-calculated-text">—</span>
+                                        {% endif %}
+                                    </td>
+                                    {% endwith %}
+                                {% endfor %}
+                                
+                                <!-- Итого по сотруднику -->
+                                <td class="text-center salary-total">
+                                    {% with total=emp_data.salaries|sum_values %}
+                                    {{ total|floatformat:0 }}
+                                    {% endwith %}
+                                </td>
+                            </tr>
+                            {% endfor %}
                         {% endfor %}
                     {% empty %}
                     <tr>

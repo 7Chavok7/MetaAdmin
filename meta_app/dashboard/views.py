@@ -951,68 +951,119 @@ def calculate_salary(request):
 def salary_table(request):
     """Страница таблицы зарплат"""
     
-    # Получаем год из GET-параметров
     current_year = timezone.now().year
     year = int(request.GET.get('year', current_year))
-    
-    # Получаем все месяцы (1-12)
     months = range(1, 13)
     
-    # Получаем сотрудников, сгруппированных по подразделениям
+    # Получаем всех сотрудников с подразделениями
     employees = Employee.objects.filter(
         is_active=True,
         is_superuser=False
     ).select_related('department').order_by('department__name', 'last_name')
     
-    # Группируем по подразделениям
-    departments_dict = {}
+    # ============================================
+    # ГРУППИРУЕМ ПО РОДИТЕЛЬСКИМ ПОДРАЗДЕЛЕНИЯМ
+    # ============================================
+    # Сначала группируем по родительскому подразделению
+    parent_groups = {}
+    
     for emp in employees:
-        dept_name = emp.department.name if emp.department else 'Без подразделения'
-        if dept_name not in departments_dict:
-            departments_dict[dept_name] = []
-        departments_dict[dept_name].append(emp)
-    
-    # Сортируем подразделения
-    sorted_departments = sorted(departments_dict.items())
-    
-    # Собираем данные для таблицы
-    table_data = []
-    for dept_name, dept_employees in sorted_departments:
-        dept_data = {
-            'department': dept_name,
-            'employees': []
-        }
-        
-        for employee in dept_employees:
-            # Получаем зарплаты за каждый месяц
-            salary_records = SalaryRecord.objects.filter(
-                employee=employee,
-                year=year
-            ).order_by('month')
+        if emp.department:
+            # Получаем родительское подразделение (верхний уровень)
+            parent = emp.department.parent or emp.department
+            parent_name = parent.name
             
-            # Создаём массив из 12 месяцев
-            month_salaries = [None] * 12
-            for record in salary_records:
-                month_salaries[record.month - 1] = {
-                    'total': float(record.total_salary),
-                    'base': float(record.base_salary),
-                    'bonus': float(record.kpi_bonus),
-                    'is_calculated': record.is_calculated,
+            if parent_name not in parent_groups:
+                parent_groups[parent_name] = {
+                    'parent': parent,
+                    'children': {}
                 }
             
-            dept_data['employees'].append({
-                'employee': employee,
-                'salaries': month_salaries,
+            # Группируем по дочерним подразделениям внутри родителя
+            child_name = emp.department.name
+            if child_name not in parent_groups[parent_name]['children']:
+                parent_groups[parent_name]['children'][child_name] = {
+                    'department': emp.department,
+                    'employees': []
+                }
+            
+            parent_groups[parent_name]['children'][child_name]['employees'].append(emp)
+        else:
+            # Сотрудники без подразделения
+            if 'Без подразделения' not in parent_groups:
+                parent_groups['Без подразделения'] = {
+                    'parent': None,
+                    'children': {
+                        'Без подразделения': {
+                            'department': None,
+                            'employees': []
+                        }
+                    }
+                }
+            parent_groups['Без подразделения']['children']['Без подразделения']['employees'].append(emp)
+    
+    # ============================================
+    # СОБИРАЕМ ДАННЫЕ ДЛЯ ТАБЛИЦЫ
+    # ============================================
+    table_data = []
+    
+    # Сортируем родительские подразделения
+    sorted_parents = sorted(parent_groups.keys())
+    
+    for parent_name in sorted_parents:
+        parent_group = parent_groups[parent_name]
+        
+        # Для каждого родителя создаём блок
+        parent_data = {
+            'parent_name': parent_name,
+            'parent': parent_group['parent'],
+            'children': []
+        }
+        
+        # Сортируем дочерние подразделения
+        sorted_children = sorted(parent_group['children'].keys())
+        
+        for child_name in sorted_children:
+            child_data = parent_group['children'][child_name]
+            child_dept = child_data['department']
+            child_employees = child_data['employees']
+            
+            # Собираем данные по каждому сотруднику
+            employees_data = []
+            for employee in child_employees:
+                # Получаем зарплаты за каждый месяц
+                salary_records = SalaryRecord.objects.filter(
+                    employee=employee,
+                    year=year
+                ).order_by('month')
+                
+                month_salaries = [None] * 12
+                for record in salary_records:
+                    month_salaries[record.month - 1] = {
+                        'total': float(record.total_salary),
+                        'base': float(record.base_salary),
+                        'bonus': float(record.kpi_bonus),
+                        'is_calculated': record.is_calculated,
+                    }
+                
+                employees_data.append({
+                    'employee': employee,
+                    'salaries': month_salaries,
+                })
+            
+            parent_data['children'].append({
+                'department_name': child_name,
+                'department': child_dept,
+                'employees': employees_data,
             })
         
-        table_data.append(dept_data)
+        table_data.append(parent_data)
     
     # Проверяем, какие месяцы уже рассчитаны
     calculated_months = set()
     for record in SalaryRecord.objects.filter(year=year).values_list('month', flat=True).distinct():
         calculated_months.add(record)
     
-    # Получаем текущий месяц для подсветки
     current_month = timezone.now().month
     
     context = {
