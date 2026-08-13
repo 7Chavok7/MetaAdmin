@@ -1,6 +1,6 @@
 {% extends 'base/base.html' %}
 {% load static %}
-{% load attendance_filters %} 
+{% load attendance_filters %}
 
 {% block title %}Таблица зарплат - MetaAdmin{% endblock %}
 
@@ -15,10 +15,39 @@
         z-index: 10;
         background: #f8f9fa;
     }
-    .salary-table .dept-header {
-        background: #e9ecef;
-        font-weight: 600;
+    
+    /* ===== ЗАГОЛОВОК ПОДРАЗДЕЛЕНИЯ ===== */
+    .dept-header-row {
+        background: #e9ecef !important;
+        border-top: 2px solid #dee2e6;
+        border-bottom: 2px solid #dee2e6;
     }
+    .dept-header-row td {
+        padding: 6px 12px !important;
+        font-weight: 600;
+        color: #212529;
+        background: #e9ecef !important;
+    }
+    .dept-header-row .dept-icon {
+        font-size: 16px;
+        margin-right: 8px;
+    }
+    .dept-header-row .dept-badge {
+        font-size: 11px;
+        padding: 2px 10px;
+        font-weight: 400;
+        background: #6c757d;
+        color: white;
+        border-radius: 12px;
+        margin-left: 10px;
+    }
+    .dept-header-row .dept-employees-count {
+        font-size: 12px;
+        color: #6c757d;
+        font-weight: 400;
+        margin-left: 8px;
+    }
+    
     .salary-cell {
         cursor: pointer;
         transition: background 0.2s;
@@ -58,8 +87,11 @@
         font-size: 10px;
         color: #adb5bd;
     }
+    
     .btn-calc-month {
         transition: all 0.2s;
+        padding: 2px 6px;
+        font-size: 11px;
     }
     .btn-calc-month:hover {
         transform: scale(1.05);
@@ -74,14 +106,17 @@
         border-color: #ffc107;
         color: #212529;
     }
+    
     .salary-total {
         font-weight: 700;
         font-size: 14px;
+        background: #f8f9fa;
     }
     .dept-total {
-        background: #f1f3f5;
+        background: #e9ecef !important;
         font-weight: 600;
     }
+    
     .table-responsive {
         max-height: 80vh;
         overflow-y: auto;
@@ -98,6 +133,7 @@
         z-index: 6;
         background: #e9ecef;
     }
+    
     .year-nav {
         display: flex;
         align-items: center;
@@ -107,6 +143,16 @@
         padding: 4px 12px;
         font-size: 18px;
         line-height: 1;
+    }
+    
+    .employee-link {
+        color: #212529;
+        text-decoration: none;
+        font-weight: 500;
+    }
+    .employee-link:hover {
+        color: #0d6efd;
+        text-decoration: underline;
     }
 </style>
 {% endblock %}
@@ -129,7 +175,7 @@
 </div>
 
 <!-- Информация -->
-<div class="alert alert-info d-flex justify-content-between align-items-center">
+<div class="alert alert-info d-flex justify-content-between align-items-center flex-wrap gap-2">
     <div>
         <i class="bi bi-info-circle"></i>
         <strong>Легенда:</strong>
@@ -175,26 +221,25 @@
                 </thead>
                 <tbody>
                     {% for dept in table_data %}
-                        <!-- Заголовок подразделения -->
-                        <tr>
-                            <td class="sticky-col-dept fw-bold bg-light" colspan="1">
-                                <i class="bi bi-diagram-3 text-primary"></i> {{ dept.department }}
+                        <!-- ===== ЗАГОЛОВОК ПОДРАЗДЕЛЕНИЯ ===== -->
+                        <tr class="dept-header-row">
+                            <td colspan="14">
+                                <i class="bi bi-diagram-3 dept-icon text-primary"></i>
+                                {{ dept.department }}
+                                <span class="dept-badge">{{ dept.employees|length }} сотрудников</span>
+                                <span class="dept-employees-count">
+                                    <i class="bi bi-people"></i>
+                                </span>
                             </td>
-                            {% for month in months %}
-                            <td class="text-center bg-light">
-                                <span class="badge bg-secondary" id="dept-total-{{ forloop.counter }}">—</span>
-                            </td>
-                            {% endfor %}
-                            <td class="text-center bg-light fw-bold">—</td>
                         </tr>
                         
-                        <!-- Сотрудники -->
+                        <!-- Сотрудники подразделения -->
                         {% for emp_data in dept.employees %}
                         <tr>
                             <td class="sticky-col" style="min-width: 200px; max-width: 200px;">
                                 <div class="d-flex align-items-center">
                                     <a href="{% url 'dashboard:employee_detail' emp_data.employee.id %}" 
-                                       class="text-decoration-none text-dark">
+                                       class="employee-link">
                                         {{ emp_data.employee.short_name }}
                                     </a>
                                     <small class="text-muted ms-1" style="font-size: 10px;">
@@ -230,7 +275,7 @@
                             {% endfor %}
                             
                             <!-- Итого по сотруднику -->
-                            <td class="text-center salary-total" style="background: #f8f9fa;">
+                            <td class="text-center salary-total">
                                 {% with total=emp_data.salaries|sum_values %}
                                 {{ total|floatformat:0 }}
                                 {% endwith %}
@@ -253,7 +298,6 @@
 
 <script>
 function calculateMonth(year, month) {
-    // Проверяем, не нажали ли уже
     const btn = event.target.closest('.btn-calc-month');
     if (btn.classList.contains('calculated')) {
         if (!confirm('Зарплата за этот месяц уже рассчитана. Пересчитать?')) {
@@ -278,8 +322,7 @@ function calculateMonth(year, month) {
             btn.className = 'btn btn-sm btn-calc-month calculated';
             btn.innerHTML = '<i class="bi bi-check-circle"></i>';
             showNotification('✅ ' + data.message);
-            // Обновляем ячейки для этого месяца
-            updateMonthCells(year, month);
+            location.reload();
         } else {
             btn.className = 'btn btn-sm btn-calc-month not-calculated';
             btn.innerHTML = '<i class="bi bi-exclamation-triangle"></i>';
@@ -306,13 +349,10 @@ function calculateAllMonths() {
     let processed = 0;
     
     months.forEach(month => {
-        // Находим кнопку для месяца
         const buttons = document.querySelectorAll('.btn-calc-month');
         const btn = buttons[month - 1];
         
         setTimeout(() => {
-            // Имитируем клик для каждого месяца
-            const event = { target: btn };
             calculateMonthWithDelay({{ year }}, month, btn, () => {
                 processed++;
                 if (processed === 12) {
@@ -320,7 +360,7 @@ function calculateAllMonths() {
                     setTimeout(() => location.reload(), 1000);
                 }
             });
-        }, month * 500); // Задержка между запросами
+        }, month * 500);
     });
 }
 
@@ -358,11 +398,6 @@ function calculateMonthWithDelay(year, month, btn, callback) {
     });
 }
 
-function updateMonthCells(year, month) {
-    // Обновляем ячейки для указанного месяца
-    location.reload();
-}
-
 function showNotification(message) {
     const div = document.createElement('div');
     div.className = 'alert alert-info alert-dismissible fade show position-fixed';
@@ -382,13 +417,4 @@ function showNotification(message) {
     setTimeout(() => { if (div) div.remove(); }, 3000);
 }
 </script>
-
-{% block extra_js %}
-<script>
-// Дополнительные фильтры для суммы по сотруднику
-document.addEventListener('DOMContentLoaded', function() {
-    // Можно добавить сортировку или дополнительные функции
-});
-</script>
-{% endblock %}
 {% endblock %}

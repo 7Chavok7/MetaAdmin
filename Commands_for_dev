@@ -46,6 +46,15 @@ docker-compose exec web python manage.py showmigrations
 # Откатить последнюю миграцию
 docker-compose exec web python manage.py migrate attendance 0003
 
+📋 Шпаргалка
+Команда	Описание
+docker-compose restart web	                            Перезапустить web (быстро)
+docker-compose stop web && docker-compose start web	    Остановить и запустить web
+docker-compose down && docker-compose up -d	            Полный перезапуск всех контейнеров
+docker-compose up -d --build web	                    Пересобрать и запустить web
+docker-compose logs -f web	                            Посмотреть логи web после перезапуска
+
+
 
 === MANAGE.PY SHELL ===
 
