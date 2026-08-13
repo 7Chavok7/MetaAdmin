@@ -964,7 +964,6 @@ def salary_table(request):
     # ============================================
     # ГРУППИРУЕМ ПО РОДИТЕЛЬСКИМ ПОДРАЗДЕЛЕНИЯМ
     # ============================================
-    # Сначала группируем по родительскому подразделению
     parent_groups = {}
     
     for emp in employees:
@@ -976,7 +975,8 @@ def salary_table(request):
             if parent_name not in parent_groups:
                 parent_groups[parent_name] = {
                     'parent': parent,
-                    'children': {}
+                    'children': {},
+                    'total_employees': 0
                 }
             
             # Группируем по дочерним подразделениям внутри родителя
@@ -988,6 +988,7 @@ def salary_table(request):
                 }
             
             parent_groups[parent_name]['children'][child_name]['employees'].append(emp)
+            parent_groups[parent_name]['total_employees'] += 1
         else:
             # Сотрудники без подразделения
             if 'Без подразделения' not in parent_groups:
@@ -998,9 +999,11 @@ def salary_table(request):
                             'department': None,
                             'employees': []
                         }
-                    }
+                    },
+                    'total_employees': 0
                 }
             parent_groups['Без подразделения']['children']['Без подразделения']['employees'].append(emp)
+            parent_groups['Без подразделения']['total_employees'] += 1
     
     # ============================================
     # СОБИРАЕМ ДАННЫЕ ДЛЯ ТАБЛИЦЫ
@@ -1017,7 +1020,8 @@ def salary_table(request):
         parent_data = {
             'parent_name': parent_name,
             'parent': parent_group['parent'],
-            'children': []
+            'children': [],
+            'total_employees': parent_group['total_employees']
         }
         
         # Сортируем дочерние подразделения
@@ -1039,12 +1043,13 @@ def salary_table(request):
                 
                 month_salaries = [None] * 12
                 for record in salary_records:
-                    month_salaries[record.month - 1] = {
-                        'total': float(record.total_salary),
-                        'base': float(record.base_salary),
-                        'bonus': float(record.kpi_bonus),
-                        'is_calculated': record.is_calculated,
-                    }
+                    if record.month - 1 < 12:
+                        month_salaries[record.month - 1] = {
+                            'total': float(record.total_salary),
+                            'base': float(record.base_salary),
+                            'bonus': float(record.kpi_bonus),
+                            'is_calculated': record.is_calculated,
+                        }
                 
                 employees_data.append({
                     'employee': employee,

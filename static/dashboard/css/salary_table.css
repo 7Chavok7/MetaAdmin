@@ -1,0 +1,201 @@
+/* static/dashboard/css/salary_table.css */
+
+.salary-table {
+    font-size: 13px;
+}
+
+.salary-table th {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    background: #f8f9fa;
+}
+
+/* ===== ЗАГОЛОВКИ ===== */
+.parent-header {
+    background: #cfe2ff !important;
+    cursor: pointer;
+    transition: background 0.2s;
+    border-top: 2px solid #0d6efd;
+    border-bottom: 2px solid #0d6efd;
+}
+
+.parent-header:hover {
+    background: #b6d4fe !important;
+}
+
+.parent-header td {
+    padding: 8px 12px !important;
+    font-weight: 700;
+    font-size: 15px;
+    color: #0d6efd;
+    background: #cfe2ff !important;
+}
+
+.parent-header .toggle-icon {
+    transition: transform 0.3s ease;
+    display: inline-block;
+}
+
+.parent-header .toggle-icon.collapsed {
+    transform: rotate(-90deg);
+}
+
+.parent-header .parent-badge {
+    font-size: 12px;
+    padding: 2px 12px;
+    font-weight: 400;
+    background: #0d6efd;
+    color: white;
+    border-radius: 12px;
+    margin-left: 10px;
+}
+
+.dept-header-row {
+    background: #e9ecef !important;
+    border-top: 1px solid #dee2e6;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.dept-header-row td {
+    padding: 6px 12px !important;
+    font-weight: 600;
+    color: #212529;
+    background: #e9ecef !important;
+}
+
+.dept-header-row .dept-icon {
+    font-size: 14px;
+    margin-right: 6px;
+    color: #6c757d;
+}
+
+.dept-header-row .dept-badge {
+    font-size: 11px;
+    padding: 2px 10px;
+    font-weight: 400;
+    background: #6c757d;
+    color: white;
+    border-radius: 12px;
+    margin-left: 8px;
+}
+
+/* ===== СТРОКИ РОДИТЕЛЬСКИХ ПОДРАЗДЕЛЕНИЙ ===== */
+.parent-content {
+    transition: all 0.3s ease;
+}
+
+.parent-content.hidden {
+    display: none;
+}
+
+.salary-cell {
+    cursor: pointer;
+    transition: background 0.2s;
+    text-align: center;
+    padding: 4px 2px !important;
+    min-width: 70px;
+}
+
+.salary-cell:hover {
+    background: #fff3cd !important;
+}
+
+.salary-cell.calculated {
+    background: #d4edda;
+}
+
+.salary-cell.not-calculated {
+    background: #f8f9fa;
+    color: #6c757d;
+}
+
+.salary-cell.current-month {
+    border-left: 3px solid #0d6efd;
+    border-right: 3px solid #0d6efd;
+}
+
+.salary-cell .amount {
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.salary-cell .bonus {
+    font-size: 10px;
+    color: #28a745;
+    display: block;
+}
+
+.salary-cell .base {
+    font-size: 9px;
+    color: #6c757d;
+    display: block;
+}
+
+.salary-cell .not-calculated-text {
+    font-size: 10px;
+    color: #adb5bd;
+}
+
+.btn-calc-month {
+    transition: all 0.2s;
+    padding: 2px 6px;
+    font-size: 11px;
+}
+
+.btn-calc-month:hover {
+    transform: scale(1.05);
+}
+
+.btn-calc-month.calculated {
+    background: #28a745;
+    border-color: #28a745;
+    color: white;
+}
+
+.btn-calc-month.not-calculated {
+    background: #ffc107;
+    border-color: #ffc107;
+    color: #212529;
+}
+
+.salary-total {
+    font-weight: 700;
+    font-size: 14px;
+    background: #f8f9fa;
+}
+
+.table-responsive {
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.sticky-col {
+    position: sticky;
+    left: 0;
+    z-index: 5;
+    background: white;
+}
+
+.year-nav {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.year-nav .btn {
+    padding: 4px 12px;
+    font-size: 18px;
+    line-height: 1;
+}
+
+.employee-link {
+    color: #212529;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.employee-link:hover {
+    color: #0d6efd;
+    text-decoration: underline;
+}
